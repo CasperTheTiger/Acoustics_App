@@ -3,69 +3,103 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Launch Board</title>
+    <title>Acoustics Channel Simulator</title>
     <link rel="stylesheet" href="styles.css">
   </head>
   <body>
-    <main class="app-shell">
-      <section class="workspace" aria-label="Launch Board app">
-        <header class="topbar">
-          <div>
-            <p class="eyebrow">Personal app starter</p>
-            <h1>Launch Board</h1>
-          </div>
-          <button class="icon-button" id="clearDoneButton" type="button" title="Clear completed tasks" aria-label="Clear completed tasks">
-            <span aria-hidden="true">✓</span>
-          </button>
-        </header>
+    <main class="simulator">
+      <header class="masthead">
+        <div>
+          <p class="eyebrow">Acoustics App</p>
+          <h1>Dangerous Channel Transit</h1>
+        </div>
+        <div class="status-strip" aria-label="System status">
+          <span id="integrityStatus">GPS normal</span>
+          <span id="acousticStatus">Acoustic fix ready</span>
+        </div>
+      </header>
 
-        <section class="summary" aria-label="Task summary">
-          <article>
-            <span id="totalCount">0</span>
-            <p>Total</p>
-          </article>
-          <article>
-            <span id="activeCount">0</span>
-            <p>Active</p>
-          </article>
-          <article>
-            <span id="doneCount">0</span>
-            <p>Done</p>
-          </article>
+      <section class="simulation-grid">
+        <section class="chart-section" aria-label="Channel simulation">
+          <canvas id="channelCanvas" width="980" height="680"></canvas>
+          <div class="chart-legend" aria-label="Map legend">
+            <span><i class="legend-vessel"></i> Vessel</span>
+            <span><i class="legend-gps"></i> GPS track</span>
+            <span><i class="legend-acoustic"></i> Acoustic fix</span>
+            <span><i class="legend-danger"></i> Hazard</span>
+          </div>
         </section>
 
-        <form class="task-form" id="taskForm">
-          <label for="taskInput">New task</label>
-          <div class="input-row">
-            <input id="taskInput" name="task" type="text" autocomplete="off" placeholder="Add your next app idea..." required>
-            <button type="submit">Add</button>
-          </div>
-        </form>
-
-        <section class="task-panel" aria-label="Tasks">
-          <div class="panel-heading">
-            <h2>Today</h2>
-            <div class="filter-group" aria-label="Task filter">
-              <button class="filter active" type="button" data-filter="all">All</button>
-              <button class="filter" type="button" data-filter="active">Active</button>
-              <button class="filter" type="button" data-filter="done">Done</button>
+        <aside class="control-section" aria-label="Simulation controls and readings">
+          <section class="readout-band">
+            <div>
+              <span id="positionReadout">0.0 nm</span>
+              <p>Channel progress</p>
             </div>
-          </div>
-          <ul class="task-list" id="taskList"></ul>
-          <p class="empty-state" id="emptyState">Add a task to start shaping your app.</p>
-        </section>
+            <div>
+              <span id="riskReadout">Low</span>
+              <p>Navigation risk</p>
+            </div>
+          </section>
+
+          <section class="scenario-panel">
+            <h2>Scenario</h2>
+            <div class="button-row" role="group" aria-label="Scenario controls">
+              <button id="playButton" type="button">Pause</button>
+              <button id="resetButton" type="button">Reset</button>
+            </div>
+
+            <label class="slider-label" for="speedSlider">
+              Vessel speed
+              <span id="speedValue">8 kn</span>
+            </label>
+            <input id="speedSlider" type="range" min="4" max="16" value="8">
+
+            <div class="toggle-list">
+              <label>
+                <input id="jamToggle" type="checkbox">
+                GPS jamming
+              </label>
+              <label>
+                <input id="spoofToggle" type="checkbox">
+                GPS spoofing
+              </label>
+              <label>
+                <input id="acousticToggle" type="checkbox" checked>
+                Acoustic positioning
+              </label>
+            </div>
+          </section>
+
+          <section class="diagnostics-panel">
+            <h2>Diagnostics</h2>
+            <dl>
+              <div>
+                <dt>GPS confidence</dt>
+                <dd id="gpsConfidence">96%</dd>
+              </div>
+              <div>
+                <dt>Acoustic confidence</dt>
+                <dd id="acousticConfidence">82%</dd>
+              </div>
+              <div>
+                <dt>Position difference</dt>
+                <dd id="positionDelta">12 m</dd>
+              </div>
+              <div>
+                <dt>Closest hazard</dt>
+                <dd id="hazardDistance">Clear</dd>
+              </div>
+            </dl>
+          </section>
+
+          <section class="decision-panel">
+            <h2>Decision Support</h2>
+            <p id="decisionText">Transit is stable. GPS and acoustics agree.</p>
+          </section>
+        </aside>
       </section>
     </main>
-
-    <template id="taskTemplate">
-      <li class="task-item">
-        <label>
-          <input type="checkbox">
-          <span class="task-title"></span>
-        </label>
-        <button class="remove-button" type="button" title="Remove task" aria-label="Remove task">×</button>
-      </li>
-    </template>
 
     <script src="app.js"></script>
   </body>

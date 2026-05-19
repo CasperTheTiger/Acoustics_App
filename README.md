@@ -1,49 +1,34 @@
-# Launch Board
+# Acoustics Channel Simulator
 
-A small browser app you can open in VS Code, push to GitHub, and host with GitHub Pages.
+A browser-based prototype for exploring two navigation questions:
 
-## Open in VS Code
+- Are we being jammed or spoofed?
+- Do acoustic position fixes help solve or validate vessel position?
 
-1. Open VS Code.
-2. Choose **File > Open Folder**.
-3. Open this folder:
+The app simulates a vessel moving through a dangerous channel with hazards, a GPS track, acoustic beacons, and live decision-support readouts.
 
-   `/Users/phoebeflood/Documents/Codex/2026-05-19/i-want-to-build-an-app`
+## Run Locally
 
-4. Open `index.html` in your browser to try the app.
-
-## Put it on GitHub
-
-1. Create a new repository on GitHub.
-2. In VS Code, open the Source Control panel.
-3. Commit the files.
-4. Publish the branch to your new GitHub repository.
-
-You can also do this from the terminal:
+Open `index.html` in a browser, or use a local preview server from this folder:
 
 ```sh
-git init
-git add .
-git commit -m "Create Launch Board app"
-git branch -M main
-git remote add origin https://github.com/YOUR-USERNAME/YOUR-REPOSITORY.git
-git push -u origin main
+python3 -m http.server 4173
 ```
 
-## Host it on GitHub Pages
+Then open:
 
-1. Open your repository on GitHub.
-2. Go to **Settings > Pages**.
-3. Under **Build and deployment**, choose **Deploy from a branch**.
-4. Set the branch to `main` and the folder to `/root`.
-5. Save.
+```txt
+http://localhost:4173/
+```
 
-GitHub will publish your site at:
+## Use the Simulator
 
-`https://YOUR-USERNAME.github.io/YOUR-REPOSITORY/`
+- Adjust vessel speed with the slider.
+- Turn on GPS jamming to degrade GPS confidence.
+- Turn on GPS spoofing to offset the GPS track from the vessel.
+- Turn acoustic positioning on or off to compare acoustic fixes against GPS.
+- Watch the risk, confidence, position difference, and decision-support messages update in real time.
 
-## Customize it
+## Host on GitHub Pages
 
-- Change the app name in `index.html`.
-- Change colors and layout in `styles.css`.
-- Change task behavior in `app.js`.
+Because this is a static browser app, it can be hosted directly with GitHub Pages from the `main` branch and `/root` folder.
