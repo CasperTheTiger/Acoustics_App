@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Launch Board</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="workspace" aria-label="Launch Board app">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Personal app starter</p>
+            <h1>Launch Board</h1>
+          </div>
+          <button class="icon-button" id="clearDoneButton" type="button" title="Clear completed tasks" aria-label="Clear completed tasks">
+            <span aria-hidden="true">✓</span>
+          </button>
+        </header>
+
+        <section class="summary" aria-label="Task summary">
+          <article>
+            <span id="totalCount">0</span>
+            <p>Total</p>
+          </article>
+          <article>
+            <span id="activeCount">0</span>
+            <p>Active</p>
+          </article>
+          <article>
+            <span id="doneCount">0</span>
+            <p>Done</p>
+          </article>
+        </section>
+
+        <form class="task-form" id="taskForm">
+          <label for="taskInput">New task</label>
+          <div class="input-row">
+            <input id="taskInput" name="task" type="text" autocomplete="off" placeholder="Add your next app idea..." required>
+            <button type="submit">Add</button>
+          </div>
+        </form>
+
+        <section class="task-panel" aria-label="Tasks">
+          <div class="panel-heading">
+            <h2>Today</h2>
+            <div class="filter-group" aria-label="Task filter">
+              <button class="filter active" type="button" data-filter="all">All</button>
+              <button class="filter" type="button" data-filter="active">Active</button>
+              <button class="filter" type="button" data-filter="done">Done</button>
+            </div>
+          </div>
+          <ul class="task-list" id="taskList"></ul>
+          <p class="empty-state" id="emptyState">Add a task to start shaping your app.</p>
+        </section>
+      </section>
+    </main>
+
+    <template id="taskTemplate">
+      <li class="task-item">
+        <label>
+          <input type="checkbox">
+          <span class="task-title"></span>
+        </label>
+        <button class="remove-button" type="button" title="Remove task" aria-label="Remove task">×</button>
+      </li>
+    </template>
+
+    <script src="app.js"></script>
+  </body>
+</html>
