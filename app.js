@@ -8,6 +8,11 @@ const speedValue = document.querySelector("#speedValue");
 const jamToggle = document.querySelector("#jamToggle");
 const spoofToggle = document.querySelector("#spoofToggle");
 const acousticToggle = document.querySelector("#acousticToggle");
+const soundSpeedSlider = document.querySelector("#soundSpeedSlider");
+const soundSpeedValue = document.querySelector("#soundSpeedValue");
+const clockSyncToggle = document.querySelector("#clockSyncToggle");
+const fusionToggle = document.querySelector("#fusionToggle");
+const solverModeInputs = document.querySelectorAll("input[name='solverMode']");
 const mapUpload = document.querySelector("#mapUpload");
 const markThreatButton = document.querySelector("#markThreatButton");
 const clearThreatsButton = document.querySelector("#clearThreatsButton");
@@ -29,6 +34,12 @@ const positionDelta = document.querySelector("#positionDelta");
 const hazardDistance = document.querySelector("#hazardDistance");
 const decisionText = document.querySelector("#decisionText");
 const graphPeak = document.querySelector("#graphPeak");
+const toaReadout = document.querySelector("#toaReadout");
+const tdoaReadout = document.querySelector("#tdoaReadout");
+const bearingReadout = document.querySelector("#bearingReadout");
+const dopReadout = document.querySelector("#dopReadout");
+const covarianceReadout = document.querySelector("#covarianceReadout");
+const fusionReadout = document.querySelector("#fusionReadout");
 
 const defaultHazards = [
   { x: 0.38, y: 0.28, r: 0.035, label: "Rock shelf" },
@@ -50,10 +61,12 @@ let isPlaying = true;
 let lastFrame = performance.now();
 let gpsTrail = [];
 let acousticTrail = [];
+let fusedTrail = [];
 let differenceHistory = [];
 let draggedBeacon = null;
 let mapImage = null;
 let isMarkingThreats = false;
+let fusedPosition = null;
 
 function centerline(t) {
   return {
@@ -97,15 +110,6 @@ function gpsFix(vessel) {
   return noisyFix(vessel, 0.009, 1.1);
 }
 
-function acousticFix(vessel) {
-  if (!acousticToggle.checked) return null;
-  const shadowZone = Math.abs(progress - 0.58) < 0.08;
-  const averageAccuracy = beacons.reduce((sum, beacon) => sum + beacon.accuracy, 0) / beacons.length;
-  const geometryPenalty = beaconGeometryPenalty(vessel);
-  const noiseMeters = averageAccuracy * geometryPenalty * (shadowZone ? 1.8 : 1);
-  return noisyFix(vessel, noiseMeters / 1852, 4.7);
-}
-
 function toCanvas(point) {
   return {
     x: point.x * canvas.width,
@@ -132,6 +136,187 @@ function beaconQuality(beacon) {
   if (beacon.accuracy <= 30) return "High";
   if (beacon.accuracy <= 60) return "Medium";
   return "Low";
+}
+
+function currentSolverMode() {
+  return document.querySelector("input[name='solverMode']:checked")?.value || "toa";
+}
+
+function averageBeaconAccuracy() {
+  return beacons.reduce((sum, beacon) => sum + beacon.accuracy, 0) / beacons.length;
+}
+
+function simulatedMeasurementNoise(beacon, index) {
+  const shadowZone = Math.abs(progress - 0.58) < 0.08;
+  const shadowScale = shadowZone ? 1.75 : 1;
+  const wave = Math.sin(progress * 24 + index * 1.9) * 0.55 + Math.cos(progress * 17 + index) * 0.25;
+  return wave * beacon.accuracy * 0.32 * shadowScale;
+}
+
+function acousticMeasurements(vessel) {
+  const soundSpeed = Number(soundSpeedSlider.value);
+  const clockBiasMeters = clockSyncToggle.checked ? 0 : Math.sin(progress * 8.5) * 34;
+
+  return beacons.map((beacon, index) => {
+    const trueRangeMeters = distance(vessel, beacon) * 1852;
+    const measuredRangeMeters = trueRangeMeters + simulatedMeasurementNoise(beacon, index) + clockBiasMeters;
+    return {
+      beacon,
+      measuredRangeMeters,
+      timeSeconds: measuredRangeMeters / soundSpeed,
+      weight: 1 / Math.max(1, beacon.accuracy * beacon.accuracy)
+    };
+  });
+}
+
+function leastSquaresMultilateration(measurements, mode) {
+  let estimate = acousticTrail.length ? { ...acousticTrail[acousticTrail.length - 1] } : centerline(progress);
+  const reference = measurements[0];
+  const damping = 0.000001;
+
+  for (let iteration = 0; iteration < 8; iteration += 1) {
+    let a = damping;
+    let b = 0;
+    let d = damping;
+    let e = 0;
+    let f = 0;
+
+    measurements.forEach((measurement, index) => {
+      if (mode === "tdoa" && index === 0) return;
+
+      const range = Math.max(distance(estimate, measurement.beacon), 0.0001);
+      const unitX = (estimate.x - measurement.beacon.x) / range;
+      const unitY = (estimate.y - measurement.beacon.y) / range;
+      let residual;
+      let hX;
+      let hY;
+
+      if (mode === "tdoa") {
+        const referenceRange = Math.max(distance(estimate, reference.beacon), 0.0001);
+        const refUnitX = (estimate.x - reference.beacon.x) / referenceRange;
+        const refUnitY = (estimate.y - reference.beacon.y) / referenceRange;
+        const predictedDiff = (range - referenceRange) * 1852;
+        const measuredDiff = measurement.measuredRangeMeters - reference.measuredRangeMeters;
+        residual = predictedDiff - measuredDiff;
+        hX = (unitX - refUnitX) * 1852;
+        hY = (unitY - refUnitY) * 1852;
+      } else {
+        residual = range * 1852 - measurement.measuredRangeMeters;
+        hX = unitX * 1852;
+        hY = unitY * 1852;
+      }
+
+      const weight = measurement.weight;
+      a += weight * hX * hX;
+      b += weight * hX * hY;
+      d += weight * hY * hY;
+      e += weight * hX * residual;
+      f += weight * hY * residual;
+    });
+
+    const det = a * d - b * b;
+    if (Math.abs(det) < 0.0000001) break;
+
+    const stepX = (d * e - b * f) / det;
+    const stepY = (-b * e + a * f) / det;
+    estimate.x = clamp(estimate.x - stepX, 0.03, 0.97);
+    estimate.y = clamp(estimate.y - stepY, 0.03, 0.97);
+
+    if (Math.hypot(stepX, stepY) < 0.00001) break;
+  }
+
+  return estimate;
+}
+
+function geometryStats(position, mode) {
+  const reference = beacons[0];
+  const averageAccuracy = averageBeaconAccuracy();
+  let a = 0.000001;
+  let b = 0;
+  let d = 0.000001;
+
+  beacons.forEach((beacon, index) => {
+    if (mode === "tdoa" && index === 0) return;
+
+    const range = Math.max(distance(position, beacon), 0.0001);
+    let hX = (position.x - beacon.x) / range;
+    let hY = (position.y - beacon.y) / range;
+
+    if (mode === "tdoa") {
+      const refRange = Math.max(distance(position, reference), 0.0001);
+      hX -= (position.x - reference.x) / refRange;
+      hY -= (position.y - reference.y) / refRange;
+    }
+
+    a += hX * hX;
+    b += hX * hY;
+    d += hY * hY;
+  });
+
+  const det = a * d - b * b;
+  const invA = d / det;
+  const invB = -b / det;
+  const invD = a / det;
+  const dop = Math.sqrt(Math.max(0, invA + invD));
+  const sigmaX = Math.sqrt(Math.abs(invA)) * averageAccuracy;
+  const sigmaY = Math.sqrt(Math.abs(invD)) * averageAccuracy;
+  const covarianceXY = invB * averageAccuracy * averageAccuracy;
+  const quality = dop < 1.8 ? "Strong" : dop < 3 ? "Fair" : "Weak";
+
+  return { dop, sigmaX, sigmaY, covarianceXY, quality };
+}
+
+function bearingFromNearestBeacon(position) {
+  const nearest = beacons.reduce((best, beacon) => {
+    const gap = distance(position, beacon);
+    return gap < best.gap ? { beacon, gap } : best;
+  }, { beacon: beacons[0], gap: Infinity }).beacon;
+  const dx = position.x - nearest.x;
+  const dy = nearest.y - position.y;
+  return (Math.atan2(dx, dy) * 180 / Math.PI + 360) % 360;
+}
+
+function fusePositions(gps, acoustic, stats) {
+  if (!fusionToggle.checked || !acoustic) {
+    fusedPosition = null;
+    return null;
+  }
+
+  const gpsVariance = (jamToggle.checked ? 120 : spoofToggle.checked ? 180 : 28) ** 2;
+  const acousticVariance = Math.max(12, (stats.sigmaX + stats.sigmaY) / 2) ** 2;
+  const gpsWeight = 1 / gpsVariance;
+  const acousticWeight = 1 / acousticVariance;
+  const measurement = {
+    x: (gps.x * gpsWeight + acoustic.x * acousticWeight) / (gpsWeight + acousticWeight),
+    y: (gps.y * gpsWeight + acoustic.y * acousticWeight) / (gpsWeight + acousticWeight)
+  };
+
+  if (!fusedPosition) {
+    fusedPosition = measurement;
+  } else {
+    const kalmanGain = acousticVariance < gpsVariance ? 0.42 : 0.26;
+    fusedPosition = {
+      x: fusedPosition.x + (measurement.x - fusedPosition.x) * kalmanGain,
+      y: fusedPosition.y + (measurement.y - fusedPosition.y) * kalmanGain
+    };
+  }
+
+  return fusedPosition;
+}
+
+function acousticSolution(vessel, gps) {
+  if (!acousticToggle.checked) return null;
+
+  const mode = currentSolverMode();
+  const measurements = acousticMeasurements(vessel);
+  const fix = leastSquaresMultilateration(measurements, mode);
+  const stats = geometryStats(fix, mode);
+  const bearing = bearingFromNearestBeacon(fix);
+  const toaAverage = measurements.reduce((sum, measurement) => sum + measurement.timeSeconds, 0) / measurements.length;
+  const tdoaSpread = Math.max(...measurements.map((measurement) => measurement.timeSeconds)) - Math.min(...measurements.map((measurement) => measurement.timeSeconds));
+  const fused = fusePositions(gps, fix, stats);
+
+  return { fix, measurements, stats, bearing, toaAverage, tdoaSpread, fused, mode };
 }
 
 function drawChannel() {
@@ -377,7 +562,7 @@ function drawVessel(vessel) {
   ctx.restore();
 }
 
-function updateReadouts(vessel, gps, acoustic) {
+function updateReadouts(vessel, gps, acoustic, solution) {
   const gpsError = distance(vessel, gps) * 1852;
   const acousticError = acoustic ? distance(vessel, acoustic) * 1852 : null;
   const delta = acoustic ? distance(gps, acoustic) * 1852 : gpsError;
@@ -388,6 +573,7 @@ function updateReadouts(vessel, gps, acoustic) {
   const gpsScore = spoofToggle.checked ? 42 : jamToggle.checked ? 38 : Math.max(62, 98 - gpsError * 0.9);
   const averageBeaconAccuracy = beacons.reduce((sum, beacon) => sum + beacon.accuracy, 0) / beacons.length;
   const acousticScore = acoustic ? Math.max(28, 96 - acousticError * 0.55 - averageBeaconAccuracy * 0.32) : 0;
+  const fusedError = solution?.fused ? distance(vessel, solution.fused) * 1852 : null;
   const risk = closestHazard < 60 || delta > 130 ? "High" : closestHazard < 120 || delta > 70 ? "Medium" : "Low";
   const peakDelta = differenceHistory.length ? Math.max(...differenceHistory) : 0;
 
@@ -398,6 +584,12 @@ function updateReadouts(vessel, gps, acoustic) {
   acousticConfidence.textContent = acoustic ? `${Math.round(acousticScore)}%` : "Off";
   positionDelta.textContent = `${Math.round(delta)} m`;
   graphPeak.textContent = `Peak ${Math.round(peakDelta)} m`;
+  toaReadout.textContent = solution ? `${solution.toaAverage.toFixed(3)} s` : "Off";
+  tdoaReadout.textContent = solution ? `${solution.tdoaSpread.toFixed(3)} s` : "Off";
+  bearingReadout.textContent = solution ? `${Math.round(solution.bearing).toString().padStart(3, "0")} deg` : "Off";
+  dopReadout.textContent = solution ? `${solution.stats.dop.toFixed(1)} ${solution.stats.quality}` : "Off";
+  covarianceReadout.textContent = solution ? `${Math.round(solution.stats.sigmaX)} / ${Math.round(solution.stats.sigmaY)} m` : "Off";
+  fusionReadout.textContent = fusedError === null ? "Off" : `${Math.round(fusedError)} m`;
   hazardDistance.textContent = Number.isFinite(closestHazard)
     ? closestHazard < 0 ? "Inside danger" : `${Math.round(closestHazard)} m`
     : "Clear";
@@ -432,13 +624,17 @@ function updateReadouts(vessel, gps, acoustic) {
 function drawFrame() {
   const vessel = vesselState(progress);
   const gps = gpsFix(vessel);
-  const acoustic = acousticFix(vessel);
+  const solution = acousticSolution(vessel, gps);
+  const acoustic = solution?.fix || null;
+  const fused = solution?.fused || null;
 
   gpsTrail.push(gps);
   if (acoustic) acousticTrail.push(acoustic);
+  if (fused) fusedTrail.push(fused);
   if (acoustic) differenceHistory.push(distance(gps, acoustic) * 1852);
   gpsTrail = gpsTrail.slice(-90);
   acousticTrail = acousticTrail.slice(-90);
+  fusedTrail = fusedTrail.slice(-90);
   differenceHistory = differenceHistory.slice(-150);
 
   drawChannel();
@@ -446,11 +642,13 @@ function drawFrame() {
   drawBeacons();
   drawTrail(gpsTrail, "rgba(36, 95, 211, 0.78)");
   drawTrail(acousticTrail, "rgba(115, 87, 200, 0.7)");
+  drawTrail(fusedTrail, "rgba(22, 118, 95, 0.72)");
   drawFix(gps, "#245fd3", jamToggle.checked || spoofToggle.checked ? 24 : 14);
   drawFix(acoustic, "#7357c8", 17);
+  drawFix(fused, "#16765f", 13);
   drawVessel(vessel);
   drawDifferenceGraph();
-  updateReadouts(vessel, gps, acoustic);
+  updateReadouts(vessel, gps, acoustic, solution);
 }
 
 function renderBeaconControls() {
@@ -496,6 +694,8 @@ function updateBeaconFromInput(input, shouldRender = true) {
   if (field === "accuracy") beacon.accuracy = Math.round(clamp(value, 10, 120));
 
   acousticTrail = [];
+  fusedTrail = [];
+  fusedPosition = null;
   differenceHistory = [];
   if (shouldRender) renderBeaconControls();
 }
@@ -556,6 +756,8 @@ resetButton.addEventListener("click", () => {
   progress = 0;
   gpsTrail = [];
   acousticTrail = [];
+  fusedTrail = [];
+  fusedPosition = null;
   differenceHistory = [];
 });
 
@@ -571,6 +773,8 @@ mapUpload.addEventListener("change", (event) => {
       hazards = [];
       gpsTrail = [];
       acousticTrail = [];
+      fusedTrail = [];
+      fusedPosition = null;
       differenceHistory = [];
       updateMapHint();
     });
@@ -595,6 +799,32 @@ speedSlider.addEventListener("input", () => {
   speedValue.textContent = `${speedSlider.value} kn`;
 });
 
+soundSpeedSlider.addEventListener("input", () => {
+  soundSpeedValue.textContent = `${soundSpeedSlider.value} m/s`;
+  acousticTrail = [];
+  fusedTrail = [];
+  fusedPosition = null;
+  differenceHistory = [];
+});
+
+solverModeInputs.forEach((input) => {
+  input.addEventListener("change", () => {
+    acousticTrail = [];
+    fusedTrail = [];
+    fusedPosition = null;
+    differenceHistory = [];
+  });
+});
+
+[clockSyncToggle, fusionToggle].forEach((control) => {
+  control.addEventListener("change", () => {
+    acousticTrail = [];
+    fusedTrail = [];
+    fusedPosition = null;
+    differenceHistory = [];
+  });
+});
+
 beaconControls.addEventListener("change", (event) => {
   if (event.target.matches("input")) updateBeaconFromInput(event.target);
 });
@@ -606,6 +836,8 @@ beaconControls.addEventListener("input", (event) => {
 resetBeaconsButton.addEventListener("click", () => {
   beacons = defaultBeacons.map((beacon) => ({ ...beacon }));
   acousticTrail = [];
+  fusedTrail = [];
+  fusedPosition = null;
   differenceHistory = [];
   renderBeaconControls();
 });
@@ -635,6 +867,8 @@ canvas.addEventListener("pointermove", (event) => {
   draggedBeacon.x = point.x;
   draggedBeacon.y = point.y;
   acousticTrail = [];
+  fusedTrail = [];
+  fusedPosition = null;
   differenceHistory = [];
   renderBeaconControls();
 });
@@ -653,6 +887,8 @@ canvas.addEventListener("pointercancel", () => {
     if (control === spoofToggle && control.checked) jamToggle.checked = false;
     gpsTrail = [];
     acousticTrail = [];
+    fusedTrail = [];
+    fusedPosition = null;
     differenceHistory = [];
   });
 });

@@ -26,6 +26,7 @@
             <span><i class="legend-vessel"></i> Vessel</span>
             <span><i class="legend-gps"></i> GPS track</span>
             <span><i class="legend-acoustic"></i> Acoustic fix</span>
+            <span><i class="legend-fused"></i> Fused fix</span>
             <span><i class="legend-beacon"></i> Acoustic beacon</span>
             <span><i class="legend-danger"></i> Hazard</span>
           </div>
@@ -70,6 +71,65 @@
                 Acoustic positioning
               </label>
             </div>
+          </section>
+
+          <section class="solver-panel">
+            <h2>Acoustic Solver</h2>
+
+            <div class="mode-row" role="radiogroup" aria-label="Acoustic measurement mode">
+              <label>
+                <input type="radio" name="solverMode" value="toa" checked>
+                TOA
+              </label>
+              <label>
+                <input type="radio" name="solverMode" value="tdoa">
+                TDOA
+              </label>
+            </div>
+
+            <label class="slider-label" for="soundSpeedSlider">
+              Speed of sound
+              <span id="soundSpeedValue">1500 m/s</span>
+            </label>
+            <input id="soundSpeedSlider" type="range" min="1450" max="1550" value="1500">
+
+            <div class="toggle-list">
+              <label>
+                <input id="clockSyncToggle" type="checkbox" checked>
+                Sensor clock sync
+              </label>
+              <label>
+                <input id="fusionToggle" type="checkbox" checked>
+                Kalman-style fusion
+              </label>
+            </div>
+
+            <dl class="solver-readouts">
+              <div>
+                <dt>TOA range</dt>
+                <dd id="toaReadout">0.000 s</dd>
+              </div>
+              <div>
+                <dt>TDOA spread</dt>
+                <dd id="tdoaReadout">0.000 s</dd>
+              </div>
+              <div>
+                <dt>Bearing</dt>
+                <dd id="bearingReadout">000 deg</dd>
+              </div>
+              <div>
+                <dt>DOP</dt>
+                <dd id="dopReadout">0.0</dd>
+              </div>
+              <div>
+                <dt>Covariance</dt>
+                <dd id="covarianceReadout">0 / 0 m</dd>
+              </div>
+              <div>
+                <dt>Fused error</dt>
+                <dd id="fusionReadout">0 m</dd>
+              </div>
+            </dl>
           </section>
 
           <section class="map-panel">

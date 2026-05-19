@@ -29,8 +29,12 @@ http://localhost:4173/
 - Turn acoustic positioning on or off to compare acoustic fixes against GPS.
 - Upload a map image to use as the chart background.
 - Turn on Mark threats and click the map to identify hazards.
+- Switch between TOA and TDOA acoustic measurement modes.
+- Adjust the speed of sound in water.
+- Turn sensor clock synchronization and Kalman-style fusion on or off.
 - Drag acoustic beacons on the map or enter their X/Y positions manually.
 - Set each beacon accuracy in meters to change the acoustic confidence and map accuracy rings.
+- Monitor bearing, DOP, covariance, and fused position error.
 - Watch the risk, confidence, position difference, and decision-support messages update in real time.
 
 ## Maths Behind the Simulation
@@ -110,15 +114,72 @@ gpsY = vesselY - 0.045 + small variation
 
 This means spoofing looks stable, but the GPS position is displaced from the vessel and acoustic fix.
 
-### Acoustic Position
+### Acoustic Solver
 
-The acoustic fix is also simulated as the vessel position plus noise:
+The app now simulates an acoustic measurement pipeline. It first generates time or range measurements from the vessel to each beacon, then estimates the acoustic position using least-squares multilateration.
+
+The speed of sound is user-adjustable:
 
 ```txt
-acoustic = vessel + acousticNoise
+soundSpeed = 1450 to 1550 m/s
 ```
 
-The acoustic noise depends on beacon accuracy and beacon geometry.
+For time of arrival (TOA), the app simulates a measured range to each beacon:
+
+```txt
+trueRange = distance(vessel, beacon) * 1852
+measuredRange = trueRange + measurementNoise + clockBias
+toa = measuredRange / soundSpeed
+```
+
+When sensor clock synchronization is enabled:
+
+```txt
+clockBias = 0
+```
+
+When clock synchronization is disabled, the app adds a shared clock-bias error:
+
+```txt
+clockBias = sin(progress * 8.5) * 34 m
+```
+
+For time difference of arrival (TDOA), the app compares each beacon against the first beacon:
+
+```txt
+tdoa = toaBeacon - toaReference
+```
+
+This reduces the impact of shared clock bias because it uses time differences instead of absolute arrival times.
+
+### Least-Squares Multilateration
+
+The acoustic position is solved iteratively. The app starts from the previous acoustic fix, or from the route centerline if there is no previous fix.
+
+For TOA, each residual is:
+
+```txt
+residual = predictedRange - measuredRange
+```
+
+For TDOA, each residual is:
+
+```txt
+residual = predictedRangeDifference - measuredRangeDifference
+```
+
+The app builds a small linear system from the measurement gradients and solves it repeatedly:
+
+```txt
+normalMatrix * positionStep = residualVector
+estimate = estimate - positionStep
+```
+
+This is a simplified Gauss-Newton least-squares solver.
+
+### Acoustic Measurement Noise
+
+Measurement noise depends on beacon accuracy and a simulated acoustic shadow zone.
 
 First, the app calculates average beacon accuracy:
 
@@ -126,36 +187,93 @@ First, the app calculates average beacon accuracy:
 averageAccuracy = sum(beaconAccuracy) / numberOfBeacons
 ```
 
-Then it estimates a simple geometry penalty:
+Each beacon gets a deterministic measurement noise term:
 
 ```txt
-nearestBeaconDistance = distance from vessel to nearest beacon
-farthestBeaconDistance = distance from vessel to farthest beacon
-spread = farthestBeaconDistance - nearestBeaconDistance
-
-geometryPenalty = clamp(1.35 - spread, 0.85, 1.45)
+measurementNoise = wave * beaconAccuracy * 0.32 * shadowScale
 ```
 
-This is a simplified stand-in for real acoustic geometry quality. If the beacon layout is weaker, acoustic uncertainty gets worse.
-
-The acoustic noise is then:
-
-```txt
-noiseMeters = averageAccuracy * geometryPenalty
-```
-
-There is also a simulated acoustic shadow zone around the middle of the channel:
+The shadow zone increases uncertainty near the middle of the route:
 
 ```txt
 if progress is near 0.58:
-  noiseMeters = noiseMeters * 1.8
+  shadowScale = 1.75
+else:
+  shadowScale = 1.0
 ```
 
-The app converts meters into map units using:
+### Bearing Estimation
+
+The bearing readout is calculated from the nearest acoustic beacon toward the acoustic position estimate.
+
+```txt
+bearing = atan2(deltaX, deltaY)
+```
+
+It is displayed in degrees from `000` to `359`.
+
+### DOP and Geometry Quality
+
+The app estimates DOP, or dilution of precision, from the beacon geometry around the acoustic fix.
+
+For each beacon, the app calculates a unit direction vector from the beacon to the estimated position. For TDOA, it uses the difference between each beacon direction and the reference beacon direction.
+
+Those geometry vectors are used to build a geometry matrix:
+
+```txt
+G = geometry matrix
+Q = inverse(transpose(G) * G)
+DOP = sqrt(Qxx + Qyy)
+```
+
+The app labels geometry quality as:
+
+```txt
+DOP < 1.8   Strong
+DOP < 3.0   Fair
+otherwise   Weak
+```
+
+### Uncertainty Covariance
+
+The covariance readout estimates uncertainty in the X and Y directions from the geometry matrix and average beacon accuracy.
+
+```txt
+sigmaX = sqrt(Qxx) * averageBeaconAccuracy
+sigmaY = sqrt(Qyy) * averageBeaconAccuracy
+covarianceXY = Qxy * averageBeaconAccuracy^2
+```
+
+The app displays `sigmaX / sigmaY` in meters.
+
+### Kalman-Style Sensor Fusion
+
+When Kalman-style fusion is enabled, the app blends GPS and acoustic fixes using uncertainty-weighted averaging.
+
+```txt
+gpsWeight = 1 / gpsVariance
+acousticWeight = 1 / acousticVariance
+
+measurement =
+  (gps * gpsWeight + acoustic * acousticWeight)
+  / (gpsWeight + acousticWeight)
+```
+
+Then it smooths the fused position using a simple gain:
+
+```txt
+fusedPosition = previousFusedPosition
+  + (measurement - previousFusedPosition) * kalmanGain
+```
+
+This is not a full production Kalman filter yet, but it demonstrates the core sensor-fusion idea: trust the measurement source with lower estimated uncertainty more.
+
+### Map Unit Conversion
+
+The app treats one normalized map unit as approximately one nautical mile:
 
 ```txt
 1 nautical mile = 1852 meters
-noiseMapUnits = noiseMeters / 1852
 ```
 
 ### Distance Calculations
@@ -253,21 +371,19 @@ else:
 
 ### Current Limitation
 
-This prototype does not yet perform real acoustic positioning from measured sound travel times.
+This prototype now includes simulated TOA, TDOA, speed of sound, clock synchronization, least-squares multilateration, bearing, DOP, covariance, and Kalman-style fusion.
 
-A real acoustic positioning system would use measurements and methods such as:
+A real navigation-grade system would still need real sensor measurements and stronger modelling, including:
 
-- Time of arrival
-- Time difference of arrival
-- Speed of sound in water
-- Sensor clock synchronization
-- Least-squares multilateration
-- Bearing estimation
-- Uncertainty covariance
-- Dilution of precision
-- Kalman filtering or other sensor fusion methods
+- measured acoustic travel times or ranges
+- water temperature, salinity, and depth effects on sound speed
+- clock discipline and timestamp quality
+- outlier rejection
+- multipath and acoustic shadow modelling
+- full Kalman, extended Kalman, or particle filtering
+- validation against real survey or vessel-track data
 
-The next maths upgrade would be to replace the simulated acoustic fix with real multilateration from beacon positions and measured ranges or time differences.
+The next maths upgrade would be to let the user enter real measured ranges or arrival times instead of using simulated measurements.
 
 ## Host on GitHub Pages
 
