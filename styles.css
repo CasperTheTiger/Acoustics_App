@@ -173,6 +173,7 @@ h2 {
 .scenario-panel,
 .acoustic-panel,
 .diagnostics-panel,
+.graph-panel,
 .decision-panel {
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -200,6 +201,7 @@ dt,
 .scenario-panel,
 .acoustic-panel,
 .diagnostics-panel,
+.graph-panel,
 .decision-panel {
   display: grid;
   gap: 14px;
@@ -225,11 +227,17 @@ dt,
   background: var(--ink);
 }
 
-.panel-title-row {
+.panel-title-row,
+.graph-heading {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+}
+
+.panel-actions {
+  display: flex;
+  gap: 6px;
 }
 
 .panel-title-row button {
@@ -240,6 +248,33 @@ dt,
   color: #fff;
   background: var(--ink);
   font-weight: 850;
+}
+
+.acoustic-panel.is-collapsed .beacon-grid {
+  display: none;
+}
+
+.graph-heading span {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 850;
+}
+
+#differenceCanvas {
+  width: 100%;
+  height: 126px;
+  display: block;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: linear-gradient(180deg, #ffffff, #edf4f5);
+}
+
+.graph-scale {
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 800;
 }
 
 .slider-label {
@@ -419,7 +454,8 @@ dd {
     grid-column: 1 / -1;
   }
 
-  .acoustic-panel {
+  .acoustic-panel,
+  .graph-panel {
     grid-column: 1 / -1;
   }
 

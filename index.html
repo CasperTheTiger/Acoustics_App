@@ -75,7 +75,10 @@
           <section class="acoustic-panel">
             <div class="panel-title-row">
               <h2>Acoustic Beacons</h2>
-              <button id="resetBeaconsButton" type="button">Reset</button>
+              <div class="panel-actions">
+                <button id="toggleBeaconsButton" type="button" aria-expanded="true" aria-controls="beaconControls">Collapse</button>
+                <button id="resetBeaconsButton" type="button">Reset</button>
+              </div>
             </div>
             <div class="beacon-grid" id="beaconControls"></div>
           </section>
@@ -100,6 +103,18 @@
                 <dd id="hazardDistance">Clear</dd>
               </div>
             </dl>
+          </section>
+
+          <section class="graph-panel" aria-label="GPS and acoustic difference graph">
+            <div class="graph-heading">
+              <h2>GPS - Acoustic Difference</h2>
+              <span id="graphPeak">Peak 0 m</span>
+            </div>
+            <canvas id="differenceCanvas" width="680" height="220"></canvas>
+            <div class="graph-scale">
+              <span>0 m</span>
+              <span>300 m</span>
+            </div>
           </section>
 
           <section class="decision-panel">

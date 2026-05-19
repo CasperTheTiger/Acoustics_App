@@ -9,7 +9,11 @@ const jamToggle = document.querySelector("#jamToggle");
 const spoofToggle = document.querySelector("#spoofToggle");
 const acousticToggle = document.querySelector("#acousticToggle");
 const resetBeaconsButton = document.querySelector("#resetBeaconsButton");
+const toggleBeaconsButton = document.querySelector("#toggleBeaconsButton");
 const beaconControls = document.querySelector("#beaconControls");
+const acousticPanel = document.querySelector(".acoustic-panel");
+const differenceCanvas = document.querySelector("#differenceCanvas");
+const differenceCtx = differenceCanvas.getContext("2d");
 
 const integrityStatus = document.querySelector("#integrityStatus");
 const acousticStatus = document.querySelector("#acousticStatus");
@@ -20,6 +24,7 @@ const acousticConfidence = document.querySelector("#acousticConfidence");
 const positionDelta = document.querySelector("#positionDelta");
 const hazardDistance = document.querySelector("#hazardDistance");
 const decisionText = document.querySelector("#decisionText");
+const graphPeak = document.querySelector("#graphPeak");
 
 const hazards = [
   { x: 0.38, y: 0.28, r: 0.035, label: "Rock shelf" },
@@ -40,6 +45,7 @@ let isPlaying = true;
 let lastFrame = performance.now();
 let gpsTrail = [];
 let acousticTrail = [];
+let differenceHistory = [];
 let draggedBeacon = null;
 
 function centerline(t) {
@@ -255,6 +261,62 @@ function drawFix(point, color, radius) {
   ctx.stroke();
 }
 
+function drawDifferenceGraph() {
+  const width = differenceCanvas.width;
+  const height = differenceCanvas.height;
+  const maxMeters = 300;
+  const dangerLine = 130;
+  const warningLine = 70;
+
+  differenceCtx.clearRect(0, 0, width, height);
+  differenceCtx.fillStyle = "#ffffff";
+  differenceCtx.fillRect(0, 0, width, height);
+
+  differenceCtx.strokeStyle = "#dfe7ea";
+  differenceCtx.lineWidth = 1;
+  for (let i = 0; i <= 3; i += 1) {
+    const y = height - (i / 3) * height;
+    differenceCtx.beginPath();
+    differenceCtx.moveTo(0, y);
+    differenceCtx.lineTo(width, y);
+    differenceCtx.stroke();
+  }
+
+  drawThresholdLine(warningLine, "#d59b2d", maxMeters);
+  drawThresholdLine(dangerLine, "#c74d52", maxMeters);
+
+  if (differenceHistory.length > 1) {
+    differenceCtx.strokeStyle = "#7357c8";
+    differenceCtx.lineWidth = 4;
+    differenceCtx.lineJoin = "round";
+    differenceCtx.beginPath();
+    differenceHistory.forEach((value, index) => {
+      const x = (index / Math.max(1, differenceHistory.length - 1)) * width;
+      const y = height - (clamp(value, 0, maxMeters) / maxMeters) * height;
+      if (index === 0) differenceCtx.moveTo(x, y);
+      else differenceCtx.lineTo(x, y);
+    });
+    differenceCtx.stroke();
+  }
+
+  differenceCtx.fillStyle = "#60717b";
+  differenceCtx.font = "800 16px system-ui";
+  differenceCtx.fillText("130 m", 10, height - (dangerLine / maxMeters) * height - 7);
+  differenceCtx.fillText("70 m", 10, height - (warningLine / maxMeters) * height - 7);
+}
+
+function drawThresholdLine(value, color, maxMeters) {
+  const y = differenceCanvas.height - (value / maxMeters) * differenceCanvas.height;
+  differenceCtx.strokeStyle = color;
+  differenceCtx.lineWidth = 2;
+  differenceCtx.setLineDash([8, 8]);
+  differenceCtx.beginPath();
+  differenceCtx.moveTo(0, y);
+  differenceCtx.lineTo(differenceCanvas.width, y);
+  differenceCtx.stroke();
+  differenceCtx.setLineDash([]);
+}
+
 function drawVessel(vessel) {
   const p = toCanvas(vessel);
   ctx.save();
@@ -285,6 +347,7 @@ function updateReadouts(vessel, gps, acoustic) {
   const averageBeaconAccuracy = beacons.reduce((sum, beacon) => sum + beacon.accuracy, 0) / beacons.length;
   const acousticScore = acoustic ? Math.max(28, 96 - acousticError * 0.55 - averageBeaconAccuracy * 0.32) : 0;
   const risk = closestHazard < 60 || delta > 130 ? "High" : closestHazard < 120 || delta > 70 ? "Medium" : "Low";
+  const peakDelta = differenceHistory.length ? Math.max(...differenceHistory) : 0;
 
   positionReadout.textContent = `${(progress * 4.8).toFixed(1)} nm`;
   riskReadout.textContent = risk;
@@ -292,6 +355,7 @@ function updateReadouts(vessel, gps, acoustic) {
   gpsConfidence.textContent = `${Math.round(gpsScore)}%`;
   acousticConfidence.textContent = acoustic ? `${Math.round(acousticScore)}%` : "Off";
   positionDelta.textContent = `${Math.round(delta)} m`;
+  graphPeak.textContent = `Peak ${Math.round(peakDelta)} m`;
   hazardDistance.textContent = closestHazard < 0 ? "Inside danger" : `${Math.round(closestHazard)} m`;
 
   if (jamToggle.checked) {
@@ -328,8 +392,10 @@ function drawFrame() {
 
   gpsTrail.push(gps);
   if (acoustic) acousticTrail.push(acoustic);
+  if (acoustic) differenceHistory.push(distance(gps, acoustic) * 1852);
   gpsTrail = gpsTrail.slice(-90);
   acousticTrail = acousticTrail.slice(-90);
+  differenceHistory = differenceHistory.slice(-150);
 
   drawChannel();
   drawHazards();
@@ -339,6 +405,7 @@ function drawFrame() {
   drawFix(gps, "#245fd3", jamToggle.checked || spoofToggle.checked ? 24 : 14);
   drawFix(acoustic, "#7357c8", 17);
   drawVessel(vessel);
+  drawDifferenceGraph();
   updateReadouts(vessel, gps, acoustic);
 }
 
@@ -385,6 +452,7 @@ function updateBeaconFromInput(input, shouldRender = true) {
   if (field === "accuracy") beacon.accuracy = Math.round(clamp(value, 10, 120));
 
   acousticTrail = [];
+  differenceHistory = [];
   if (shouldRender) renderBeaconControls();
 }
 
@@ -428,6 +496,7 @@ resetButton.addEventListener("click", () => {
   progress = 0;
   gpsTrail = [];
   acousticTrail = [];
+  differenceHistory = [];
 });
 
 speedSlider.addEventListener("input", () => {
@@ -445,7 +514,14 @@ beaconControls.addEventListener("input", (event) => {
 resetBeaconsButton.addEventListener("click", () => {
   beacons = defaultBeacons.map((beacon) => ({ ...beacon }));
   acousticTrail = [];
+  differenceHistory = [];
   renderBeaconControls();
+});
+
+toggleBeaconsButton.addEventListener("click", () => {
+  const isCollapsed = acousticPanel.classList.toggle("is-collapsed");
+  toggleBeaconsButton.textContent = isCollapsed ? "Expand" : "Collapse";
+  toggleBeaconsButton.setAttribute("aria-expanded", String(!isCollapsed));
 });
 
 canvas.addEventListener("pointerdown", (event) => {
@@ -462,6 +538,7 @@ canvas.addEventListener("pointermove", (event) => {
   draggedBeacon.x = point.x;
   draggedBeacon.y = point.y;
   acousticTrail = [];
+  differenceHistory = [];
   renderBeaconControls();
 });
 
@@ -479,6 +556,7 @@ canvas.addEventListener("pointercancel", () => {
     if (control === spoofToggle && control.checked) jamToggle.checked = false;
     gpsTrail = [];
     acousticTrail = [];
+    differenceHistory = [];
   });
 });
 
