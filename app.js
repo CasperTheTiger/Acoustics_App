@@ -44,7 +44,7 @@ const fusionReadout = document.querySelector("#fusionReadout");
 
 const translations = {
   en: {
-    appName: "Acoustics App",
+    appName: "Phoebe´s Sat-Nav",
     title: "Dangerous Channel Transit",
     language: "Language",
     legendVessel: "Vessel",
@@ -118,7 +118,7 @@ const translations = {
     lowAccuracy: "Low accuracy"
   },
   nb: {
-    appName: "Akustikk-app",
+    appName: "Phoebe´s Sat-Nav",
     title: "Seilas gjennom farlig lei",
     language: "Språk",
     legendVessel: "Fartøy",
@@ -192,7 +192,7 @@ const translations = {
     lowAccuracy: "Lav nøyaktighet"
   },
   nn: {
-    appName: "Akustikk-app",
+    appName: "Phoebe´s Sat-Nav",
     title: "Seglas gjennom farleg lei",
     language: "Språk",
     legendVessel: "Fartøy",
