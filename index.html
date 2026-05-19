@@ -26,6 +26,7 @@
             <span><i class="legend-vessel"></i> Vessel</span>
             <span><i class="legend-gps"></i> GPS track</span>
             <span><i class="legend-acoustic"></i> Acoustic fix</span>
+            <span><i class="legend-beacon"></i> Acoustic beacon</span>
             <span><i class="legend-danger"></i> Hazard</span>
           </div>
         </section>
@@ -69,6 +70,14 @@
                 Acoustic positioning
               </label>
             </div>
+          </section>
+
+          <section class="acoustic-panel">
+            <div class="panel-title-row">
+              <h2>Acoustic Beacons</h2>
+              <button id="resetBeaconsButton" type="button">Reset</button>
+            </div>
+            <div class="beacon-grid" id="beaconControls"></div>
           </section>
 
           <section class="diagnostics-panel">

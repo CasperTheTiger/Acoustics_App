@@ -149,6 +149,11 @@ h2 {
   background: var(--acoustic);
 }
 
+.legend-beacon {
+  background: #ffffff;
+  border: 3px solid var(--acoustic);
+}
+
 .legend-danger {
   background: var(--danger);
 }
@@ -166,6 +171,7 @@ h2 {
 
 .readout-band div,
 .scenario-panel,
+.acoustic-panel,
 .diagnostics-panel,
 .decision-panel {
   border: 1px solid var(--line);
@@ -192,6 +198,7 @@ dt,
 }
 
 .scenario-panel,
+.acoustic-panel,
 .diagnostics-panel,
 .decision-panel {
   display: grid;
@@ -216,6 +223,23 @@ dt,
 
 .button-row button:last-child {
   background: var(--ink);
+}
+
+.panel-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.panel-title-row button {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 8px;
+  color: #fff;
+  background: var(--ink);
+  font-weight: 850;
 }
 
 .slider-label {
@@ -257,6 +281,82 @@ input[type="range"] {
   width: 18px;
   height: 18px;
   accent-color: var(--deep-water);
+}
+
+.beacon-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.beacon-card {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-soft);
+}
+
+.beacon-card header,
+.beacon-fields {
+  display: grid;
+  gap: 8px;
+}
+
+.beacon-card header {
+  grid-template-columns: auto 1fr;
+  align-items: center;
+}
+
+.beacon-swatch {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: #fff;
+  background: var(--acoustic);
+  font-size: 0.75rem;
+  font-weight: 900;
+}
+
+.beacon-card h3 {
+  margin: 0;
+  font-size: 0.92rem;
+}
+
+.beacon-card p {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.beacon-fields {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.beacon-fields label {
+  display: grid;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.beacon-fields input {
+  width: 100%;
+  min-width: 0;
+  height: 36px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+  font-weight: 800;
+}
+
+.beacon-fields input:focus {
+  outline: 3px solid rgba(115, 87, 200, 0.2);
+  border-color: var(--acoustic);
 }
 
 dl {
@@ -318,6 +418,14 @@ dd {
   .decision-panel {
     grid-column: 1 / -1;
   }
+
+  .acoustic-panel {
+    grid-column: 1 / -1;
+  }
+
+  .beacon-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 640px) {
@@ -332,5 +440,11 @@ dd {
 
   #channelCanvas {
     min-height: 360px;
+    touch-action: none;
+  }
+
+  .beacon-grid,
+  .beacon-fields {
+    grid-template-columns: 1fr;
   }
 }

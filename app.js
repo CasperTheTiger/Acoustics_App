@@ -8,6 +8,8 @@ const speedValue = document.querySelector("#speedValue");
 const jamToggle = document.querySelector("#jamToggle");
 const spoofToggle = document.querySelector("#spoofToggle");
 const acousticToggle = document.querySelector("#acousticToggle");
+const resetBeaconsButton = document.querySelector("#resetBeaconsButton");
+const beaconControls = document.querySelector("#beaconControls");
 
 const integrityStatus = document.querySelector("#integrityStatus");
 const acousticStatus = document.querySelector("#acousticStatus");
@@ -25,18 +27,20 @@ const hazards = [
   { x: 0.43, y: 0.72, r: 0.045, label: "Shoal" }
 ];
 
-const beacons = [
-  { x: 0.18, y: 0.2, label: "A1" },
-  { x: 0.83, y: 0.32, label: "A2" },
-  { x: 0.22, y: 0.82, label: "A3" },
-  { x: 0.78, y: 0.78, label: "A4" }
+const defaultBeacons = [
+  { x: 0.18, y: 0.2, accuracy: 28, label: "A1" },
+  { x: 0.83, y: 0.32, accuracy: 42, label: "A2" },
+  { x: 0.22, y: 0.82, accuracy: 35, label: "A3" },
+  { x: 0.78, y: 0.78, accuracy: 24, label: "A4" }
 ];
 
+let beacons = defaultBeacons.map((beacon) => ({ ...beacon }));
 let progress = 0;
 let isPlaying = true;
 let lastFrame = performance.now();
 let gpsTrail = [];
 let acousticTrail = [];
+let draggedBeacon = null;
 
 function centerline(t) {
   return {
@@ -83,8 +87,10 @@ function gpsFix(vessel) {
 function acousticFix(vessel) {
   if (!acousticToggle.checked) return null;
   const shadowZone = Math.abs(progress - 0.58) < 0.08;
-  const noise = shadowZone ? 0.035 : 0.017;
-  return noisyFix(vessel, noise, 4.7);
+  const averageAccuracy = beacons.reduce((sum, beacon) => sum + beacon.accuracy, 0) / beacons.length;
+  const geometryPenalty = beaconGeometryPenalty(vessel);
+  const noiseMeters = averageAccuracy * geometryPenalty * (shadowZone ? 1.8 : 1);
+  return noisyFix(vessel, noiseMeters / 1852, 4.7);
 }
 
 function toCanvas(point) {
@@ -96,6 +102,23 @@ function toCanvas(point) {
 
 function distance(a, b) {
   return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function beaconGeometryPenalty(vessel) {
+  const nearest = Math.min(...beacons.map((beacon) => distance(vessel, beacon)));
+  const farthest = Math.max(...beacons.map((beacon) => distance(vessel, beacon)));
+  const spread = Math.max(0.08, farthest - nearest);
+  return clamp(1.35 - spread, 0.85, 1.45);
+}
+
+function beaconQuality(beacon) {
+  if (beacon.accuracy <= 30) return "High";
+  if (beacon.accuracy <= 60) return "Medium";
+  return "Low";
 }
 
 function drawChannel() {
@@ -178,9 +201,18 @@ function drawHazards() {
 function drawBeacons() {
   beacons.forEach((beacon) => {
     const p = toCanvas(beacon);
+    const ringRadius = (beacon.accuracy / 1852) * canvas.width;
+    ctx.fillStyle = "rgba(115, 87, 200, 0.08)";
+    ctx.strokeStyle = "rgba(115, 87, 200, 0.4)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, ringRadius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
     ctx.fillStyle = "#7357c8";
     ctx.beginPath();
-    ctx.arc(p.x, p.y, 8, 0, Math.PI * 2);
+    ctx.arc(p.x, p.y, draggedBeacon === beacon ? 11 : 8, 0, Math.PI * 2);
     ctx.fill();
     ctx.strokeStyle = "rgba(255, 255, 255, 0.8)";
     ctx.lineWidth = 3;
@@ -188,6 +220,9 @@ function drawBeacons() {
     ctx.fillStyle = "#162026";
     ctx.font = "800 12px system-ui";
     ctx.fillText(beacon.label, p.x, p.y - 14);
+    ctx.fillStyle = "#3b2a76";
+    ctx.font = "800 11px system-ui";
+    ctx.fillText(`${beacon.accuracy} m`, p.x, p.y + ringRadius + 14);
   });
 }
 
@@ -247,7 +282,8 @@ function updateReadouts(vessel, gps, acoustic) {
   );
 
   const gpsScore = spoofToggle.checked ? 42 : jamToggle.checked ? 38 : Math.max(62, 98 - gpsError * 0.9);
-  const acousticScore = acoustic ? Math.max(44, 92 - acousticError * 0.75) : 0;
+  const averageBeaconAccuracy = beacons.reduce((sum, beacon) => sum + beacon.accuracy, 0) / beacons.length;
+  const acousticScore = acoustic ? Math.max(28, 96 - acousticError * 0.55 - averageBeaconAccuracy * 0.32) : 0;
   const risk = closestHazard < 60 || delta > 130 ? "High" : closestHazard < 120 || delta > 70 ? "Medium" : "Low";
 
   positionReadout.textContent = `${(progress * 4.8).toFixed(1)} nm`;
@@ -306,6 +342,70 @@ function drawFrame() {
   updateReadouts(vessel, gps, acoustic);
 }
 
+function renderBeaconControls() {
+  beaconControls.innerHTML = "";
+
+  beacons.forEach((beacon, index) => {
+    const card = document.createElement("article");
+    card.className = "beacon-card";
+    card.innerHTML = `
+      <header>
+        <span class="beacon-swatch">${beacon.label}</span>
+        <div>
+          <h3>Beacon ${beacon.label}</h3>
+          <p>${beaconQuality(beacon)} accuracy</p>
+        </div>
+      </header>
+      <div class="beacon-fields">
+        <label>
+          X %
+          <input type="number" min="3" max="97" step="1" value="${Math.round(beacon.x * 100)}" data-field="x" data-index="${index}">
+        </label>
+        <label>
+          Y %
+          <input type="number" min="3" max="97" step="1" value="${Math.round(beacon.y * 100)}" data-field="y" data-index="${index}">
+        </label>
+        <label>
+          Accuracy m
+          <input type="number" min="10" max="120" step="1" value="${beacon.accuracy}" data-field="accuracy" data-index="${index}">
+        </label>
+      </div>
+    `;
+    beaconControls.append(card);
+  });
+}
+
+function updateBeaconFromInput(input, shouldRender = true) {
+  const beacon = beacons[Number(input.dataset.index)];
+  const field = input.dataset.field;
+  const value = Number(input.value);
+
+  if (field === "x") beacon.x = clamp(value / 100, 0.03, 0.97);
+  if (field === "y") beacon.y = clamp(value / 100, 0.03, 0.97);
+  if (field === "accuracy") beacon.accuracy = Math.round(clamp(value, 10, 120));
+
+  acousticTrail = [];
+  if (shouldRender) renderBeaconControls();
+}
+
+function pointerToChart(event) {
+  const rect = canvas.getBoundingClientRect();
+  return {
+    x: clamp((event.clientX - rect.left) / rect.width, 0.03, 0.97),
+    y: clamp((event.clientY - rect.top) / rect.height, 0.03, 0.97)
+  };
+}
+
+function nearestBeacon(point) {
+  return beacons.reduce(
+    (nearest, beacon) => {
+      const gap = distance(point, beacon);
+      return gap < nearest.gap ? { beacon, gap } : nearest;
+    },
+    { beacon: null, gap: Infinity }
+  );
+}
+
 function animate(now) {
   const elapsed = Math.min(80, now - lastFrame);
   lastFrame = now;
@@ -334,6 +434,45 @@ speedSlider.addEventListener("input", () => {
   speedValue.textContent = `${speedSlider.value} kn`;
 });
 
+beaconControls.addEventListener("change", (event) => {
+  if (event.target.matches("input")) updateBeaconFromInput(event.target);
+});
+
+beaconControls.addEventListener("input", (event) => {
+  if (event.target.matches("input")) updateBeaconFromInput(event.target, false);
+});
+
+resetBeaconsButton.addEventListener("click", () => {
+  beacons = defaultBeacons.map((beacon) => ({ ...beacon }));
+  acousticTrail = [];
+  renderBeaconControls();
+});
+
+canvas.addEventListener("pointerdown", (event) => {
+  const point = pointerToChart(event);
+  const nearest = nearestBeacon(point);
+  if (nearest.gap > 0.055) return;
+  draggedBeacon = nearest.beacon;
+  canvas.setPointerCapture(event.pointerId);
+});
+
+canvas.addEventListener("pointermove", (event) => {
+  if (!draggedBeacon) return;
+  const point = pointerToChart(event);
+  draggedBeacon.x = point.x;
+  draggedBeacon.y = point.y;
+  acousticTrail = [];
+  renderBeaconControls();
+});
+
+canvas.addEventListener("pointerup", () => {
+  draggedBeacon = null;
+});
+
+canvas.addEventListener("pointercancel", () => {
+  draggedBeacon = null;
+});
+
 [jamToggle, spoofToggle, acousticToggle].forEach((control) => {
   control.addEventListener("change", () => {
     if (control === jamToggle && control.checked) spoofToggle.checked = false;
@@ -343,5 +482,6 @@ speedSlider.addEventListener("input", () => {
   });
 });
 
+renderBeaconControls();
 drawFrame();
 requestAnimationFrame(animate);
