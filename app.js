@@ -1,5 +1,6 @@
 const canvas = document.querySelector("#channelCanvas");
 const ctx = canvas.getContext("2d");
+const languageSelect = document.querySelector("#languageSelect");
 
 const playButton = document.querySelector("#playButton");
 const resetButton = document.querySelector("#resetButton");
@@ -40,6 +41,249 @@ const bearingReadout = document.querySelector("#bearingReadout");
 const dopReadout = document.querySelector("#dopReadout");
 const covarianceReadout = document.querySelector("#covarianceReadout");
 const fusionReadout = document.querySelector("#fusionReadout");
+
+const translations = {
+  en: {
+    appName: "Acoustics App",
+    title: "Dangerous Channel Transit",
+    language: "Language",
+    legendVessel: "Vessel",
+    legendGps: "GPS track",
+    legendAcoustic: "Acoustic fix",
+    legendFused: "Fused fix",
+    legendBeacon: "Acoustic beacon",
+    legendHazard: "Hazard",
+    graphTitle: "GPS - Acoustic Difference",
+    channelProgress: "Channel progress",
+    navigationRisk: "Navigation risk",
+    scenario: "Scenario",
+    pause: "Pause",
+    play: "Play",
+    reset: "Reset",
+    vesselSpeed: "Vessel speed",
+    gpsJamming: "GPS jamming",
+    gpsSpoofing: "GPS spoofing",
+    acousticPositioning: "Acoustic positioning",
+    acousticSolver: "Acoustic Solver",
+    speedOfSound: "Speed of sound",
+    clockSync: "Sensor clock sync",
+    fusion: "Kalman-style fusion",
+    toaRange: "TOA range",
+    tdoaSpread: "TDOA spread",
+    bearing: "Bearing",
+    covariance: "Covariance",
+    fusedError: "Fused error",
+    mapThreats: "Map & Threats",
+    uploadMap: "Upload map",
+    markThreats: "Mark threats",
+    markingOn: "Marking on",
+    clear: "Clear",
+    acousticBeacons: "Acoustic Beacons",
+    collapse: "Collapse",
+    expand: "Expand",
+    diagnostics: "Diagnostics",
+    gpsConfidence: "GPS confidence",
+    acousticConfidence: "Acoustic confidence",
+    positionDifference: "Position difference",
+    closestHazard: "Closest hazard",
+    decisionSupport: "Decision Support",
+    peak: "Peak",
+    low: "Low",
+    medium: "Medium",
+    high: "High",
+    Strong: "Strong",
+    Fair: "Fair",
+    Weak: "Weak",
+    clearStatus: "Clear",
+    insideDanger: "Inside danger",
+    gpsNormal: "GPS normal",
+    gpsJammingSuspected: "GPS jamming suspected",
+    gpsSpoofingSuspected: "GPS spoofing suspected",
+    acousticFixActive: "Acoustic fix active",
+    acousticFixOff: "Acoustic fix off",
+    transitStable: "Transit is stable. GPS and acoustics agree.",
+    hazardTight: "Hazard margin is tight. Slow down and favor the acoustic-supported track through the channel.",
+    gpsDisagree: "GPS and acoustics disagree. Treat GPS as unreliable and use acoustics as a cross-check.",
+    gpsDegraded: "GPS signal quality is degraded. Acoustic positioning is preserving a usable relative fix.",
+    acousticDisabled: "Acoustic support is disabled. GPS is the only active position source.",
+    uploadedMap: "Uploaded map active",
+    simulatedMap: "Simulated channel active",
+    clickThreats: "Click the map to add threats.",
+    turnOnThreats: "Turn on Mark threats to identify hazards.",
+    threatsMarked: "threats marked",
+    beacon: "Beacon",
+    accuracy: "accuracy",
+    highAccuracy: "High accuracy",
+    mediumAccuracy: "Medium accuracy",
+    lowAccuracy: "Low accuracy"
+  },
+  nb: {
+    appName: "Akustikk-app",
+    title: "Seilas gjennom farlig lei",
+    language: "Språk",
+    legendVessel: "Fartøy",
+    legendGps: "GPS-spor",
+    legendAcoustic: "Akustisk posisjon",
+    legendFused: "Fusjonert posisjon",
+    legendBeacon: "Akustisk bøye",
+    legendHazard: "Fare",
+    graphTitle: "GPS - akustisk avvik",
+    channelProgress: "Fremdrift i leia",
+    navigationRisk: "Navigasjonsrisiko",
+    scenario: "Scenario",
+    pause: "Pause",
+    play: "Start",
+    reset: "Nullstill",
+    vesselSpeed: "Fartøyhastighet",
+    gpsJamming: "GPS-jamming",
+    gpsSpoofing: "GPS-spoofing",
+    acousticPositioning: "Akustisk posisjonering",
+    acousticSolver: "Akustisk løser",
+    speedOfSound: "Lydhastighet",
+    clockSync: "Klokkesynkronisering",
+    fusion: "Kalman-lignende fusjon",
+    toaRange: "TOA-avstand",
+    tdoaSpread: "TDOA-spredning",
+    bearing: "Peiling",
+    covariance: "Kovarians",
+    fusedError: "Fusjonsfeil",
+    mapThreats: "Kart og farer",
+    uploadMap: "Last opp kart",
+    markThreats: "Marker farer",
+    markingOn: "Markering på",
+    clear: "Tøm",
+    acousticBeacons: "Akustiske bøyer",
+    collapse: "Skjul",
+    expand: "Vis",
+    diagnostics: "Diagnostikk",
+    gpsConfidence: "GPS-tillit",
+    acousticConfidence: "Akustisk tillit",
+    positionDifference: "Posisjonsavvik",
+    closestHazard: "Nærmeste fare",
+    decisionSupport: "Beslutningsstøtte",
+    peak: "Topp",
+    low: "Lav",
+    medium: "Middels",
+    high: "Høy",
+    Strong: "Sterk",
+    Fair: "Greit",
+    Weak: "Svak",
+    clearStatus: "Klar",
+    insideDanger: "Inne i faresone",
+    gpsNormal: "GPS normal",
+    gpsJammingSuspected: "GPS-jamming mistenkt",
+    gpsSpoofingSuspected: "GPS-spoofing mistenkt",
+    acousticFixActive: "Akustisk posisjon aktiv",
+    acousticFixOff: "Akustisk posisjon av",
+    transitStable: "Seilasen er stabil. GPS og akustikk stemmer overens.",
+    hazardTight: "Marginen til fare er liten. Senk farten og bruk akustisk støttet spor gjennom leia.",
+    gpsDisagree: "GPS og akustikk er uenige. Behandle GPS som upålitelig og bruk akustikk som kryssjekk.",
+    gpsDegraded: "GPS-signalet er svekket. Akustisk posisjonering beholder en brukbar relativ posisjon.",
+    acousticDisabled: "Akustisk støtte er av. GPS er eneste aktive posisjonskilde.",
+    uploadedMap: "Opplastet kart aktivt",
+    simulatedMap: "Simulert lei aktiv",
+    clickThreats: "Klikk på kartet for å legge til farer.",
+    turnOnThreats: "Slå på Marker farer for å identifisere farer.",
+    threatsMarked: "farer markert",
+    beacon: "Bøye",
+    accuracy: "nøyaktighet",
+    highAccuracy: "Høy nøyaktighet",
+    mediumAccuracy: "Middels nøyaktighet",
+    lowAccuracy: "Lav nøyaktighet"
+  },
+  nn: {
+    appName: "Akustikk-app",
+    title: "Seglas gjennom farleg lei",
+    language: "Språk",
+    legendVessel: "Fartøy",
+    legendGps: "GPS-spor",
+    legendAcoustic: "Akustisk posisjon",
+    legendFused: "Fusjonert posisjon",
+    legendBeacon: "Akustisk bøye",
+    legendHazard: "Fare",
+    graphTitle: "GPS - akustisk avvik",
+    channelProgress: "Framdrift i leia",
+    navigationRisk: "Navigasjonsrisiko",
+    scenario: "Scenario",
+    pause: "Pause",
+    play: "Start",
+    reset: "Nullstill",
+    vesselSpeed: "Fartøyfart",
+    gpsJamming: "GPS-jamming",
+    gpsSpoofing: "GPS-spoofing",
+    acousticPositioning: "Akustisk posisjonering",
+    acousticSolver: "Akustisk løysar",
+    speedOfSound: "Lydfart",
+    clockSync: "Klokkesynkronisering",
+    fusion: "Kalman-liknande fusjon",
+    toaRange: "TOA-avstand",
+    tdoaSpread: "TDOA-spreiing",
+    bearing: "Peiling",
+    covariance: "Kovarians",
+    fusedError: "Fusjonsfeil",
+    mapThreats: "Kart og farar",
+    uploadMap: "Last opp kart",
+    markThreats: "Marker farar",
+    markingOn: "Markering på",
+    clear: "Tøm",
+    acousticBeacons: "Akustiske bøyer",
+    collapse: "Skjul",
+    expand: "Vis",
+    diagnostics: "Diagnostikk",
+    gpsConfidence: "GPS-tillit",
+    acousticConfidence: "Akustisk tillit",
+    positionDifference: "Posisjonsavvik",
+    closestHazard: "Næraste fare",
+    decisionSupport: "Avgjerdsstøtte",
+    peak: "Topp",
+    low: "Låg",
+    medium: "Middels",
+    high: "Høg",
+    Strong: "Sterk",
+    Fair: "Greitt",
+    Weak: "Svak",
+    clearStatus: "Klart",
+    insideDanger: "Inne i faresone",
+    gpsNormal: "GPS normal",
+    gpsJammingSuspected: "GPS-jamming mistenkt",
+    gpsSpoofingSuspected: "GPS-spoofing mistenkt",
+    acousticFixActive: "Akustisk posisjon aktiv",
+    acousticFixOff: "Akustisk posisjon av",
+    transitStable: "Seglasen er stabil. GPS og akustikk stemmer overeins.",
+    hazardTight: "Marginen til fare er liten. Senk farten og bruk akustisk støtta spor gjennom leia.",
+    gpsDisagree: "GPS og akustikk er usamde. Handsam GPS som upåliteleg og bruk akustikk som kryssjekk.",
+    gpsDegraded: "GPS-signalet er svekt. Akustisk posisjonering held oppe ein brukbar relativ posisjon.",
+    acousticDisabled: "Akustisk støtte er av. GPS er einaste aktive posisjonskjelde.",
+    uploadedMap: "Opplasta kart aktivt",
+    simulatedMap: "Simulert lei aktiv",
+    clickThreats: "Klikk på kartet for å leggja til farar.",
+    turnOnThreats: "Slå på Marker farar for å identifisera farar.",
+    threatsMarked: "farar markerte",
+    beacon: "Bøye",
+    accuracy: "nøyaktigheit",
+    highAccuracy: "Høg nøyaktigheit",
+    mediumAccuracy: "Middels nøyaktigheit",
+    lowAccuracy: "Låg nøyaktigheit"
+  }
+};
+
+let currentLanguage = "en";
+
+function t(key) {
+  return translations[currentLanguage][key] || translations.en[key] || key;
+}
+
+function applyTranslations() {
+  document.documentElement.lang = currentLanguage === "en" ? "en" : currentLanguage === "nb" ? "nb" : "nn";
+  document.querySelectorAll("[data-i18n]").forEach((element) => {
+    element.textContent = t(element.dataset.i18n);
+  });
+  playButton.textContent = isPlaying ? t("pause") : t("play");
+  markThreatButton.textContent = isMarkingThreats ? t("markingOn") : t("markThreats");
+  toggleBeaconsButton.textContent = acousticPanel.classList.contains("is-collapsed") ? t("expand") : t("collapse");
+  renderBeaconControls();
+  updateMapHint();
+}
 
 const defaultHazards = [
   { x: 0.38, y: 0.28, r: 0.035, label: "Rock shelf" },
@@ -133,9 +377,9 @@ function beaconGeometryPenalty(vessel) {
 }
 
 function beaconQuality(beacon) {
-  if (beacon.accuracy <= 30) return "High";
-  if (beacon.accuracy <= 60) return "Medium";
-  return "Low";
+  if (beacon.accuracy <= 30) return t("highAccuracy");
+  if (beacon.accuracy <= 60) return t("mediumAccuracy");
+  return t("lowAccuracy");
 }
 
 function currentSolverMode() {
@@ -574,50 +818,50 @@ function updateReadouts(vessel, gps, acoustic, solution) {
   const averageBeaconAccuracy = beacons.reduce((sum, beacon) => sum + beacon.accuracy, 0) / beacons.length;
   const acousticScore = acoustic ? Math.max(28, 96 - acousticError * 0.55 - averageBeaconAccuracy * 0.32) : 0;
   const fusedError = solution?.fused ? distance(vessel, solution.fused) * 1852 : null;
-  const risk = closestHazard < 60 || delta > 130 ? "High" : closestHazard < 120 || delta > 70 ? "Medium" : "Low";
+  const riskKey = closestHazard < 60 || delta > 130 ? "high" : closestHazard < 120 || delta > 70 ? "medium" : "low";
   const peakDelta = differenceHistory.length ? Math.max(...differenceHistory) : 0;
 
   positionReadout.textContent = `${(progress * 4.8).toFixed(1)} nm`;
-  riskReadout.textContent = risk;
-  riskReadout.className = risk === "High" ? "is-danger" : risk === "Medium" ? "is-warning" : "is-good";
+  riskReadout.textContent = t(riskKey);
+  riskReadout.className = riskKey === "high" ? "is-danger" : riskKey === "medium" ? "is-warning" : "is-good";
   gpsConfidence.textContent = `${Math.round(gpsScore)}%`;
   acousticConfidence.textContent = acoustic ? `${Math.round(acousticScore)}%` : "Off";
   positionDelta.textContent = `${Math.round(delta)} m`;
-  graphPeak.textContent = `Peak ${Math.round(peakDelta)} m`;
+  graphPeak.textContent = `${t("peak")} ${Math.round(peakDelta)} m`;
   toaReadout.textContent = solution ? `${solution.toaAverage.toFixed(3)} s` : "Off";
   tdoaReadout.textContent = solution ? `${solution.tdoaSpread.toFixed(3)} s` : "Off";
   bearingReadout.textContent = solution ? `${Math.round(solution.bearing).toString().padStart(3, "0")} deg` : "Off";
-  dopReadout.textContent = solution ? `${solution.stats.dop.toFixed(1)} ${solution.stats.quality}` : "Off";
+  dopReadout.textContent = solution ? `${solution.stats.dop.toFixed(1)} ${t(solution.stats.quality)}` : "Off";
   covarianceReadout.textContent = solution ? `${Math.round(solution.stats.sigmaX)} / ${Math.round(solution.stats.sigmaY)} m` : "Off";
   fusionReadout.textContent = fusedError === null ? "Off" : `${Math.round(fusedError)} m`;
   hazardDistance.textContent = Number.isFinite(closestHazard)
-    ? closestHazard < 0 ? "Inside danger" : `${Math.round(closestHazard)} m`
-    : "Clear";
+    ? closestHazard < 0 ? t("insideDanger") : `${Math.round(closestHazard)} m`
+    : t("clearStatus");
 
   if (jamToggle.checked) {
-    integrityStatus.textContent = "GPS jamming suspected";
+    integrityStatus.textContent = t("gpsJammingSuspected");
     integrityStatus.className = "is-warning";
   } else if (spoofToggle.checked || delta > 130) {
-    integrityStatus.textContent = "GPS spoofing suspected";
+    integrityStatus.textContent = t("gpsSpoofingSuspected");
     integrityStatus.className = "is-danger";
   } else {
-    integrityStatus.textContent = "GPS normal";
+    integrityStatus.textContent = t("gpsNormal");
     integrityStatus.className = "is-good";
   }
 
-  acousticStatus.textContent = acoustic ? "Acoustic fix active" : "Acoustic fix off";
+  acousticStatus.textContent = acoustic ? t("acousticFixActive") : t("acousticFixOff");
   acousticStatus.className = acoustic ? "is-good" : "is-warning";
 
   if (closestHazard < 60) {
-    decisionText.textContent = "Hazard margin is tight. Slow down and favor the acoustic-supported track through the channel.";
+    decisionText.textContent = t("hazardTight");
   } else if (spoofToggle.checked || delta > 130) {
-    decisionText.textContent = "GPS and acoustics disagree. Treat GPS as unreliable and use acoustics as a cross-check.";
+    decisionText.textContent = t("gpsDisagree");
   } else if (jamToggle.checked) {
-    decisionText.textContent = "GPS signal quality is degraded. Acoustic positioning is preserving a usable relative fix.";
+    decisionText.textContent = t("gpsDegraded");
   } else if (!acoustic) {
-    decisionText.textContent = "Acoustic support is disabled. GPS is the only active position source.";
+    decisionText.textContent = t("acousticDisabled");
   } else {
-    decisionText.textContent = "Transit is stable. GPS and acoustics agree.";
+    decisionText.textContent = t("transitStable");
   }
 }
 
@@ -661,8 +905,8 @@ function renderBeaconControls() {
       <header>
         <span class="beacon-swatch">${beacon.label}</span>
         <div>
-          <h3>Beacon ${beacon.label}</h3>
-          <p>${beaconQuality(beacon)} accuracy</p>
+          <h3>${t("beacon")} ${beacon.label}</h3>
+          <p>${beaconQuality(beacon)}</p>
         </div>
       </header>
       <div class="beacon-fields">
@@ -675,7 +919,7 @@ function renderBeaconControls() {
           <input type="number" min="3" max="97" step="1" value="${Math.round(beacon.y * 100)}" data-field="y" data-index="${index}">
         </label>
         <label>
-          Accuracy m
+          ${t("accuracy")} m
           <input type="number" min="10" max="120" step="1" value="${beacon.accuracy}" data-field="accuracy" data-index="${index}">
         </label>
       </div>
@@ -719,9 +963,9 @@ function addThreat(point) {
 }
 
 function updateMapHint() {
-  const mapText = mapImage ? "Uploaded map active" : "Simulated channel active";
-  const modeText = isMarkingThreats ? "Click the map to add threats." : "Turn on Mark threats to identify hazards.";
-  mapHint.textContent = `${mapText}. ${hazards.length} threats marked. ${modeText}`;
+  const mapText = mapImage ? t("uploadedMap") : t("simulatedMap");
+  const modeText = isMarkingThreats ? t("clickThreats") : t("turnOnThreats");
+  mapHint.textContent = `${mapText}. ${hazards.length} ${t("threatsMarked")}. ${modeText}`;
 }
 
 function nearestBeacon(point) {
@@ -749,7 +993,7 @@ function animate(now) {
 
 playButton.addEventListener("click", () => {
   isPlaying = !isPlaying;
-  playButton.textContent = isPlaying ? "Pause" : "Play";
+  playButton.textContent = isPlaying ? t("pause") : t("play");
 });
 
 resetButton.addEventListener("click", () => {
@@ -786,13 +1030,18 @@ mapUpload.addEventListener("change", (event) => {
 markThreatButton.addEventListener("click", () => {
   isMarkingThreats = !isMarkingThreats;
   markThreatButton.setAttribute("aria-pressed", String(isMarkingThreats));
-  markThreatButton.textContent = isMarkingThreats ? "Marking on" : "Mark threats";
+  markThreatButton.textContent = isMarkingThreats ? t("markingOn") : t("markThreats");
   updateMapHint();
 });
 
 clearThreatsButton.addEventListener("click", () => {
   hazards = [];
   updateMapHint();
+});
+
+languageSelect.addEventListener("change", () => {
+  currentLanguage = languageSelect.value;
+  applyTranslations();
 });
 
 speedSlider.addEventListener("input", () => {
@@ -844,7 +1093,7 @@ resetBeaconsButton.addEventListener("click", () => {
 
 toggleBeaconsButton.addEventListener("click", () => {
   const isCollapsed = acousticPanel.classList.toggle("is-collapsed");
-  toggleBeaconsButton.textContent = isCollapsed ? "Expand" : "Collapse";
+  toggleBeaconsButton.textContent = isCollapsed ? t("expand") : t("collapse");
   toggleBeaconsButton.setAttribute("aria-expanded", String(!isCollapsed));
 });
 
@@ -893,7 +1142,6 @@ canvas.addEventListener("pointercancel", () => {
   });
 });
 
-renderBeaconControls();
-updateMapHint();
+applyTranslations();
 drawFrame();
 requestAnimationFrame(animate);

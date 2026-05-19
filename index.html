@@ -10,12 +10,22 @@
     <main class="simulator">
       <header class="masthead">
         <div>
-          <p class="eyebrow">Acoustics App</p>
-          <h1>Dangerous Channel Transit</h1>
+          <p class="eyebrow" data-i18n="appName">Acoustics App</p>
+          <h1 data-i18n="title">Dangerous Channel Transit</h1>
         </div>
-        <div class="status-strip" aria-label="System status">
-          <span id="integrityStatus">GPS normal</span>
-          <span id="acousticStatus">Acoustic fix ready</span>
+        <div class="masthead-controls">
+          <label class="language-select" for="languageSelect">
+            <span data-i18n="language">Language</span>
+            <select id="languageSelect">
+              <option value="en">English</option>
+              <option value="nb">Norsk bokmål</option>
+              <option value="nn">Norsk nynorsk</option>
+            </select>
+          </label>
+          <div class="status-strip" aria-label="System status">
+            <span id="integrityStatus">GPS normal</span>
+            <span id="acousticStatus">Acoustic fix ready</span>
+          </div>
         </div>
       </header>
 
@@ -23,36 +33,47 @@
         <section class="chart-section" aria-label="Channel simulation">
           <canvas id="channelCanvas" width="980" height="680"></canvas>
           <div class="chart-legend" aria-label="Map legend">
-            <span><i class="legend-vessel"></i> Vessel</span>
-            <span><i class="legend-gps"></i> GPS track</span>
-            <span><i class="legend-acoustic"></i> Acoustic fix</span>
-            <span><i class="legend-fused"></i> Fused fix</span>
-            <span><i class="legend-beacon"></i> Acoustic beacon</span>
-            <span><i class="legend-danger"></i> Hazard</span>
+            <span><i class="legend-vessel"></i> <span data-i18n="legendVessel">Vessel</span></span>
+            <span><i class="legend-gps"></i> <span data-i18n="legendGps">GPS track</span></span>
+            <span><i class="legend-acoustic"></i> <span data-i18n="legendAcoustic">Acoustic fix</span></span>
+            <span><i class="legend-fused"></i> <span data-i18n="legendFused">Fused fix</span></span>
+            <span><i class="legend-beacon"></i> <span data-i18n="legendBeacon">Acoustic beacon</span></span>
+            <span><i class="legend-danger"></i> <span data-i18n="legendHazard">Hazard</span></span>
           </div>
+          <section class="graph-panel" aria-label="GPS and acoustic difference graph">
+            <div class="graph-heading">
+              <h2 data-i18n="graphTitle">GPS - Acoustic Difference</h2>
+              <span id="graphPeak">Peak 0 m</span>
+            </div>
+            <canvas id="differenceCanvas" width="980" height="260"></canvas>
+            <div class="graph-scale">
+              <span>0 m</span>
+              <span>300 m</span>
+            </div>
+          </section>
         </section>
 
         <aside class="control-section" aria-label="Simulation controls and readings">
           <section class="readout-band">
             <div>
               <span id="positionReadout">0.0 nm</span>
-              <p>Channel progress</p>
+              <p data-i18n="channelProgress">Channel progress</p>
             </div>
             <div>
               <span id="riskReadout">Low</span>
-              <p>Navigation risk</p>
+              <p data-i18n="navigationRisk">Navigation risk</p>
             </div>
           </section>
 
           <section class="scenario-panel">
-            <h2>Scenario</h2>
+            <h2 data-i18n="scenario">Scenario</h2>
             <div class="button-row" role="group" aria-label="Scenario controls">
               <button id="playButton" type="button">Pause</button>
-              <button id="resetButton" type="button">Reset</button>
+              <button id="resetButton" type="button" data-i18n="reset">Reset</button>
             </div>
 
             <label class="slider-label" for="speedSlider">
-              Vessel speed
+              <span data-i18n="vesselSpeed">Vessel speed</span>
               <span id="speedValue">8 kn</span>
             </label>
             <input id="speedSlider" type="range" min="4" max="16" value="8">
@@ -60,21 +81,21 @@
             <div class="toggle-list">
               <label>
                 <input id="jamToggle" type="checkbox">
-                GPS jamming
+                <span data-i18n="gpsJamming">GPS jamming</span>
               </label>
               <label>
                 <input id="spoofToggle" type="checkbox">
-                GPS spoofing
+                <span data-i18n="gpsSpoofing">GPS spoofing</span>
               </label>
               <label>
                 <input id="acousticToggle" type="checkbox" checked>
-                Acoustic positioning
+                <span data-i18n="acousticPositioning">Acoustic positioning</span>
               </label>
             </div>
           </section>
 
           <section class="solver-panel">
-            <h2>Acoustic Solver</h2>
+            <h2 data-i18n="acousticSolver">Acoustic Solver</h2>
 
             <div class="mode-row" role="radiogroup" aria-label="Acoustic measurement mode">
               <label>
@@ -88,7 +109,7 @@
             </div>
 
             <label class="slider-label" for="soundSpeedSlider">
-              Speed of sound
+              <span data-i18n="speedOfSound">Speed of sound</span>
               <span id="soundSpeedValue">1500 m/s</span>
             </label>
             <input id="soundSpeedSlider" type="range" min="1450" max="1550" value="1500">
@@ -96,25 +117,25 @@
             <div class="toggle-list">
               <label>
                 <input id="clockSyncToggle" type="checkbox" checked>
-                Sensor clock sync
+                <span data-i18n="clockSync">Sensor clock sync</span>
               </label>
               <label>
                 <input id="fusionToggle" type="checkbox" checked>
-                Kalman-style fusion
+                <span data-i18n="fusion">Kalman-style fusion</span>
               </label>
             </div>
 
             <dl class="solver-readouts">
               <div>
-                <dt>TOA range</dt>
+                <dt data-i18n="toaRange">TOA range</dt>
                 <dd id="toaReadout">0.000 s</dd>
               </div>
               <div>
-                <dt>TDOA spread</dt>
+                <dt data-i18n="tdoaSpread">TDOA spread</dt>
                 <dd id="tdoaReadout">0.000 s</dd>
               </div>
               <div>
-                <dt>Bearing</dt>
+                <dt data-i18n="bearing">Bearing</dt>
                 <dd id="bearingReadout">000 deg</dd>
               </div>
               <div>
@@ -122,76 +143,64 @@
                 <dd id="dopReadout">0.0</dd>
               </div>
               <div>
-                <dt>Covariance</dt>
+                <dt data-i18n="covariance">Covariance</dt>
                 <dd id="covarianceReadout">0 / 0 m</dd>
               </div>
               <div>
-                <dt>Fused error</dt>
+                <dt data-i18n="fusedError">Fused error</dt>
                 <dd id="fusionReadout">0 m</dd>
               </div>
             </dl>
           </section>
 
           <section class="map-panel">
-            <h2>Map & Threats</h2>
+            <h2 data-i18n="mapThreats">Map & Threats</h2>
             <label class="file-upload" for="mapUpload">
-              Upload map
+              <span data-i18n="uploadMap">Upload map</span>
               <input id="mapUpload" type="file" accept="image/*">
             </label>
             <div class="button-row" role="group" aria-label="Threat controls">
               <button id="markThreatButton" type="button" aria-pressed="false">Mark threats</button>
-              <button id="clearThreatsButton" type="button">Clear</button>
+              <button id="clearThreatsButton" type="button" data-i18n="clear">Clear</button>
             </div>
             <p class="map-hint" id="mapHint">Use the simulated channel, or upload a map image.</p>
           </section>
 
           <section class="acoustic-panel">
             <div class="panel-title-row">
-              <h2>Acoustic Beacons</h2>
+              <h2 data-i18n="acousticBeacons">Acoustic Beacons</h2>
               <div class="panel-actions">
                 <button id="toggleBeaconsButton" type="button" aria-expanded="true" aria-controls="beaconControls">Collapse</button>
-                <button id="resetBeaconsButton" type="button">Reset</button>
+                <button id="resetBeaconsButton" type="button" data-i18n="reset">Reset</button>
               </div>
             </div>
             <div class="beacon-grid" id="beaconControls"></div>
           </section>
 
           <section class="diagnostics-panel">
-            <h2>Diagnostics</h2>
+            <h2 data-i18n="diagnostics">Diagnostics</h2>
             <dl>
               <div>
-                <dt>GPS confidence</dt>
+                <dt data-i18n="gpsConfidence">GPS confidence</dt>
                 <dd id="gpsConfidence">96%</dd>
               </div>
               <div>
-                <dt>Acoustic confidence</dt>
+                <dt data-i18n="acousticConfidence">Acoustic confidence</dt>
                 <dd id="acousticConfidence">82%</dd>
               </div>
               <div>
-                <dt>Position difference</dt>
+                <dt data-i18n="positionDifference">Position difference</dt>
                 <dd id="positionDelta">12 m</dd>
               </div>
               <div>
-                <dt>Closest hazard</dt>
+                <dt data-i18n="closestHazard">Closest hazard</dt>
                 <dd id="hazardDistance">Clear</dd>
               </div>
             </dl>
           </section>
 
-          <section class="graph-panel" aria-label="GPS and acoustic difference graph">
-            <div class="graph-heading">
-              <h2>GPS - Acoustic Difference</h2>
-              <span id="graphPeak">Peak 0 m</span>
-            </div>
-            <canvas id="differenceCanvas" width="680" height="220"></canvas>
-            <div class="graph-scale">
-              <span>0 m</span>
-              <span>300 m</span>
-            </div>
-          </section>
-
           <section class="decision-panel">
-            <h2>Decision Support</h2>
+            <h2 data-i18n="decisionSupport">Decision Support</h2>
             <p id="decisionText">Transit is stable. GPS and acoustics agree.</p>
           </section>
         </aside>

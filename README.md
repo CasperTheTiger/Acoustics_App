@@ -24,6 +24,7 @@ http://localhost:4173/
 ## Use the Simulator
 
 - Adjust vessel speed with the slider.
+- Switch the interface language between English, Norwegian Bokmål, and Norwegian Nynorsk.
 - Turn on GPS jamming to degrade GPS confidence.
 - Turn on GPS spoofing to offset the GPS track from the vessel.
 - Turn acoustic positioning on or off to compare acoustic fixes against GPS.
@@ -34,7 +35,7 @@ http://localhost:4173/
 - Turn sensor clock synchronization and Kalman-style fusion on or off.
 - Drag acoustic beacons on the map or enter their X/Y positions manually.
 - Set each beacon accuracy in meters to change the acoustic confidence and map accuracy rings.
-- Monitor bearing, DOP, covariance, and fused position error.
+- Monitor bearing, DOP, covariance, fused position error, and the full-width GPS-acoustic difference graph under the map.
 - Watch the risk, confidence, position difference, and decision-support messages update in real time.
 
 ## Maths Behind the Simulation

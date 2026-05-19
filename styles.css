@@ -57,6 +57,31 @@ button {
   gap: 16px;
 }
 
+.masthead-controls {
+  display: grid;
+  justify-items: end;
+  gap: 10px;
+}
+
+.language-select {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 850;
+}
+
+.language-select select {
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.88);
+  color: var(--ink);
+  font-weight: 850;
+}
+
 .eyebrow {
   margin: 0 0 5px;
   color: var(--deep-water);
@@ -343,7 +368,7 @@ dt,
 
 #differenceCanvas {
   width: 100%;
-  height: 126px;
+  height: 220px;
   display: block;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -356,6 +381,18 @@ dt,
   color: var(--muted);
   font-size: 0.75rem;
   font-weight: 800;
+}
+
+.chart-section .graph-panel {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.chart-section .graph-heading,
+.chart-section .graph-scale {
+  padding: 0 2px;
 }
 
 .slider-label {
@@ -523,6 +560,11 @@ dd {
     flex-direction: column;
   }
 
+  .masthead-controls {
+    width: 100%;
+    justify-items: start;
+  }
+
   .simulation-grid {
     grid-template-columns: 1fr;
   }
@@ -536,8 +578,7 @@ dd {
   }
 
   .acoustic-panel,
-  .solver-panel,
-  .graph-panel {
+  .solver-panel {
     grid-column: 1 / -1;
   }
 
