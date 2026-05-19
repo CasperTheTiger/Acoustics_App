@@ -27,6 +27,8 @@ http://localhost:4173/
 - Turn on GPS jamming to degrade GPS confidence.
 - Turn on GPS spoofing to offset the GPS track from the vessel.
 - Turn acoustic positioning on or off to compare acoustic fixes against GPS.
+- Upload a map image to use as the chart background.
+- Turn on Mark threats and click the map to identify hazards.
 - Drag acoustic beacons on the map or enter their X/Y positions manually.
 - Set each beacon accuracy in meters to change the acoustic confidence and map accuracy rings.
 - Watch the risk, confidence, position difference, and decision-support messages update in real time.

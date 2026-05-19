@@ -72,6 +72,19 @@
             </div>
           </section>
 
+          <section class="map-panel">
+            <h2>Map & Threats</h2>
+            <label class="file-upload" for="mapUpload">
+              Upload map
+              <input id="mapUpload" type="file" accept="image/*">
+            </label>
+            <div class="button-row" role="group" aria-label="Threat controls">
+              <button id="markThreatButton" type="button" aria-pressed="false">Mark threats</button>
+              <button id="clearThreatsButton" type="button">Clear</button>
+            </div>
+            <p class="map-hint" id="mapHint">Use the simulated channel, or upload a map image.</p>
+          </section>
+
           <section class="acoustic-panel">
             <div class="panel-title-row">
               <h2>Acoustic Beacons</h2>

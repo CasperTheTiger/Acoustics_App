@@ -171,6 +171,7 @@ h2 {
 
 .readout-band div,
 .scenario-panel,
+.map-panel,
 .acoustic-panel,
 .diagnostics-panel,
 .graph-panel,
@@ -199,6 +200,7 @@ dt,
 }
 
 .scenario-panel,
+.map-panel,
 .acoustic-panel,
 .diagnostics-panel,
 .graph-panel,
@@ -225,6 +227,41 @@ dt,
 
 .button-row button:last-child {
   background: var(--ink);
+}
+
+.map-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.file-upload {
+  min-height: 44px;
+  display: grid;
+  place-items: center;
+  border: 1px dashed var(--deep-water);
+  border-radius: 8px;
+  color: var(--deep-water);
+  background: rgba(143, 199, 208, 0.16);
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.file-upload input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+#markThreatButton[aria-pressed="true"] {
+  background: var(--danger);
+}
+
+.map-hint {
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.4;
 }
 
 .panel-title-row,

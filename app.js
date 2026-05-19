@@ -8,6 +8,10 @@ const speedValue = document.querySelector("#speedValue");
 const jamToggle = document.querySelector("#jamToggle");
 const spoofToggle = document.querySelector("#spoofToggle");
 const acousticToggle = document.querySelector("#acousticToggle");
+const mapUpload = document.querySelector("#mapUpload");
+const markThreatButton = document.querySelector("#markThreatButton");
+const clearThreatsButton = document.querySelector("#clearThreatsButton");
+const mapHint = document.querySelector("#mapHint");
 const resetBeaconsButton = document.querySelector("#resetBeaconsButton");
 const toggleBeaconsButton = document.querySelector("#toggleBeaconsButton");
 const beaconControls = document.querySelector("#beaconControls");
@@ -26,7 +30,7 @@ const hazardDistance = document.querySelector("#hazardDistance");
 const decisionText = document.querySelector("#decisionText");
 const graphPeak = document.querySelector("#graphPeak");
 
-const hazards = [
+const defaultHazards = [
   { x: 0.38, y: 0.28, r: 0.035, label: "Rock shelf" },
   { x: 0.62, y: 0.48, r: 0.04, label: "Wreck" },
   { x: 0.43, y: 0.72, r: 0.045, label: "Shoal" }
@@ -39,6 +43,7 @@ const defaultBeacons = [
   { x: 0.78, y: 0.78, accuracy: 24, label: "A4" }
 ];
 
+let hazards = defaultHazards.map((hazard) => ({ ...hazard }));
 let beacons = defaultBeacons.map((beacon) => ({ ...beacon }));
 let progress = 0;
 let isPlaying = true;
@@ -47,6 +52,8 @@ let gpsTrail = [];
 let acousticTrail = [];
 let differenceHistory = [];
 let draggedBeacon = null;
+let mapImage = null;
+let isMarkingThreats = false;
 
 function centerline(t) {
   return {
@@ -128,6 +135,12 @@ function beaconQuality(beacon) {
 }
 
 function drawChannel() {
+  if (mapImage) {
+    drawUploadedMap();
+    drawRouteOverlay();
+    return;
+  }
+
   ctx.fillStyle = "#8fc7d0";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -177,6 +190,35 @@ function drawChannel() {
   }
 }
 
+function drawUploadedMap() {
+  ctx.fillStyle = "#102f38";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  const scale = Math.max(canvas.width / mapImage.width, canvas.height / mapImage.height);
+  const drawWidth = mapImage.width * scale;
+  const drawHeight = mapImage.height * scale;
+  const x = (canvas.width - drawWidth) / 2;
+  const y = (canvas.height - drawHeight) / 2;
+
+  ctx.drawImage(mapImage, x, y, drawWidth, drawHeight);
+  ctx.fillStyle = "rgba(9, 26, 31, 0.16)";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+}
+
+function drawRouteOverlay() {
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.78)";
+  ctx.lineWidth = 3;
+  ctx.setLineDash([14, 12]);
+  ctx.beginPath();
+  for (let i = 0; i <= 120; i += 1) {
+    const point = toCanvas(centerline(i / 120));
+    if (i === 0) ctx.moveTo(point.x, point.y);
+    else ctx.lineTo(point.x, point.y);
+  }
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
 function drawBuoy(point, color) {
   const p = toCanvas(point);
   ctx.fillStyle = color;
@@ -186,7 +228,7 @@ function drawBuoy(point, color) {
 }
 
 function drawHazards() {
-  hazards.forEach((hazard) => {
+  hazards.forEach((hazard, index) => {
     const p = toCanvas(hazard);
     const radius = hazard.r * canvas.width;
     ctx.fillStyle = "rgba(199, 77, 82, 0.82)";
@@ -200,7 +242,7 @@ function drawHazards() {
     ctx.fillStyle = "#ffffff";
     ctx.font = "700 13px system-ui";
     ctx.textAlign = "center";
-    ctx.fillText(hazard.label, p.x, p.y + radius + 18);
+    ctx.fillText(hazard.label || `Threat ${index + 1}`, p.x, p.y + radius + 18);
   });
 }
 
@@ -339,9 +381,9 @@ function updateReadouts(vessel, gps, acoustic) {
   const gpsError = distance(vessel, gps) * 1852;
   const acousticError = acoustic ? distance(vessel, acoustic) * 1852 : null;
   const delta = acoustic ? distance(gps, acoustic) * 1852 : gpsError;
-  const closestHazard = Math.min(
-    ...hazards.map((hazard) => (distance(vessel, hazard) - hazard.r) * 1852)
-  );
+  const closestHazard = hazards.length
+    ? Math.min(...hazards.map((hazard) => (distance(vessel, hazard) - hazard.r) * 1852))
+    : Infinity;
 
   const gpsScore = spoofToggle.checked ? 42 : jamToggle.checked ? 38 : Math.max(62, 98 - gpsError * 0.9);
   const averageBeaconAccuracy = beacons.reduce((sum, beacon) => sum + beacon.accuracy, 0) / beacons.length;
@@ -356,7 +398,9 @@ function updateReadouts(vessel, gps, acoustic) {
   acousticConfidence.textContent = acoustic ? `${Math.round(acousticScore)}%` : "Off";
   positionDelta.textContent = `${Math.round(delta)} m`;
   graphPeak.textContent = `Peak ${Math.round(peakDelta)} m`;
-  hazardDistance.textContent = closestHazard < 0 ? "Inside danger" : `${Math.round(closestHazard)} m`;
+  hazardDistance.textContent = Number.isFinite(closestHazard)
+    ? closestHazard < 0 ? "Inside danger" : `${Math.round(closestHazard)} m`
+    : "Clear";
 
   if (jamToggle.checked) {
     integrityStatus.textContent = "GPS jamming suspected";
@@ -464,6 +508,22 @@ function pointerToChart(event) {
   };
 }
 
+function addThreat(point) {
+  hazards.push({
+    x: point.x,
+    y: point.y,
+    r: 0.035,
+    label: `Threat ${hazards.length + 1}`
+  });
+  updateMapHint();
+}
+
+function updateMapHint() {
+  const mapText = mapImage ? "Uploaded map active" : "Simulated channel active";
+  const modeText = isMarkingThreats ? "Click the map to add threats." : "Turn on Mark threats to identify hazards.";
+  mapHint.textContent = `${mapText}. ${hazards.length} threats marked. ${modeText}`;
+}
+
 function nearestBeacon(point) {
   return beacons.reduce(
     (nearest, beacon) => {
@@ -499,6 +559,38 @@ resetButton.addEventListener("click", () => {
   differenceHistory = [];
 });
 
+mapUpload.addEventListener("change", (event) => {
+  const file = event.target.files?.[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.addEventListener("load", () => {
+    const image = new Image();
+    image.addEventListener("load", () => {
+      mapImage = image;
+      hazards = [];
+      gpsTrail = [];
+      acousticTrail = [];
+      differenceHistory = [];
+      updateMapHint();
+    });
+    image.src = reader.result;
+  });
+  reader.readAsDataURL(file);
+});
+
+markThreatButton.addEventListener("click", () => {
+  isMarkingThreats = !isMarkingThreats;
+  markThreatButton.setAttribute("aria-pressed", String(isMarkingThreats));
+  markThreatButton.textContent = isMarkingThreats ? "Marking on" : "Mark threats";
+  updateMapHint();
+});
+
+clearThreatsButton.addEventListener("click", () => {
+  hazards = [];
+  updateMapHint();
+});
+
 speedSlider.addEventListener("input", () => {
   speedValue.textContent = `${speedSlider.value} kn`;
 });
@@ -526,6 +618,11 @@ toggleBeaconsButton.addEventListener("click", () => {
 
 canvas.addEventListener("pointerdown", (event) => {
   const point = pointerToChart(event);
+  if (isMarkingThreats) {
+    addThreat(point);
+    return;
+  }
+
   const nearest = nearestBeacon(point);
   if (nearest.gap > 0.055) return;
   draggedBeacon = nearest.beacon;
@@ -561,5 +658,6 @@ canvas.addEventListener("pointercancel", () => {
 });
 
 renderBeaconControls();
+updateMapHint();
 drawFrame();
 requestAnimationFrame(animate);
